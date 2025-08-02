@@ -1,0 +1,54 @@
+package service
+
+import (
+	"errors"
+
+	"github.com/Ilya-c4talyst/go-advanced-shortner/pkg/utils"
+)
+
+// Структура для сервиса сокращения ссылок
+type UrlShortnerService struct {
+	DB map[string]string
+}
+
+// Конструктор для сервиса
+func NewUrlShortnerService() *UrlShortnerService {
+
+	// Создание фековой БД
+	db := make(map[string]string)
+
+	return &UrlShortnerService{
+		DB: db,
+	}
+}
+
+// Создание сокращенного URL
+func (u *UrlShortnerService) CreateShortUrl(url string) string {
+
+	// Инициализация результата
+	var shortUrl string
+
+	// Генерируем сокращенную уникальную сслыку
+	for {
+		shortUrl = utils.GenerateShortKey()
+		if _, ok := u.DB[shortUrl]; ok {
+			continue
+		}
+		break
+	}
+
+	// Сохраняем в БД
+	u.DB[shortUrl] = url
+	return shortUrl
+}
+
+// Получение полного URL
+func (u *UrlShortnerService) GetFullUrl(shortUrl string) (string, error) {
+
+	// Ищем полный URL в БД, или выдаем ошибку
+	if url, ok := u.DB[shortUrl]; ok {
+		return url, nil
+	} else {
+		return "", errors.New("Not found")
+	}
+}

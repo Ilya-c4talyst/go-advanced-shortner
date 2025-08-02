@@ -21,3 +21,7 @@ vendor/
 # IDEs directories
 .idea
 .vscode
+
+# Custom
+hints.txt
+shortenertest-darwin-arm64
