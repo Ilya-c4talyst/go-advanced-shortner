@@ -58,7 +58,7 @@ func (h *Handler) GetURL() http.HandlerFunc {
 		shortUrl := r.PathValue("id")
 
 		// Ищем ссылку в БД
-		fullUrl, err := h.Service.GetFullURL(shortUrl)
+		fullURL, err := h.Service.GetFullURL(shortUrl)
 
 		// Обрабатываем ошибку, если не нашли URL
 		if err != nil {
@@ -67,9 +67,9 @@ func (h *Handler) GetURL() http.HandlerFunc {
 		}
 
 		// Пишем ответ в респонс
-		w.Header().Set("Location", fullUrl)
+		w.Header().Set("Location", fullURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		// Почему не проходит этот вариант...
-		// http.Redirect(w, r, fullUrl, http.StatusTemporaryRedirect)
+		// http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
 	}
 }

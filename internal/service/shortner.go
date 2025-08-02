@@ -26,27 +26,27 @@ func NewURLShortnerService() *URLShortnerService {
 func (u *URLShortnerService) CreateShortURL(url string) string {
 
 	// Инициализация результата
-	var shortUrl string
+	var shortURL string
 
 	// Генерируем сокращенную уникальную сслыку
 	for {
-		shortUrl = utils.GenerateShortKey()
-		if _, ok := u.DB[shortUrl]; ok {
+		shortURL = utils.GenerateShortKey()
+		if _, ok := u.DB[shortURL]; ok {
 			continue
 		}
 		break
 	}
 
 	// Сохраняем в БД
-	u.DB[shortUrl] = url
-	return shortUrl
+	u.DB[shortURL] = url
+	return shortURL
 }
 
 // Получение полного URL
-func (u *URLShortnerService) GetFullURL(shortUrl string) (string, error) {
+func (u *URLShortnerService) GetFullURL(shortURL string) (string, error) {
 
 	// Ищем полный URL в БД, или выдаем ошибку
-	if url, ok := u.DB[shortUrl]; ok {
+	if url, ok := u.DB[shortURL]; ok {
 		return url, nil
 	} else {
 		return "", errors.New("not found")
