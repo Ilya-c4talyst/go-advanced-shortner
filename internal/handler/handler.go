@@ -10,20 +10,20 @@ import (
 
 // Структура хендера
 type Handler struct {
-	Service *service.UrlShortnerService
+	Service *service.URLShortnerService
 }
 
 // Конструктор для хендлера
-func NewHandler(mux *http.ServeMux, service *service.UrlShortnerService) {
+func NewHandler(mux *http.ServeMux, service *service.URLShortnerService) {
 	handler := &Handler{
 		service,
 	}
-	mux.HandleFunc("POST /", handler.SendUrl())
-	mux.HandleFunc("GET /{id}", handler.GetUrl())
+	mux.HandleFunc("POST /", handler.SendURL())
+	mux.HandleFunc("GET /{id}", handler.GetURL())
 }
 
 // Обработка POST запроса
-func (h *Handler) SendUrl() http.HandlerFunc {
+func (h *Handler) SendURL() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Проверка на тип контента
@@ -42,7 +42,7 @@ func (h *Handler) SendUrl() http.HandlerFunc {
 		defer r.Body.Close()
 
 		// Получаем сокращенную ссылку из сервиса
-		shortUrl := h.Service.CreateShortUrl(string(body))
+		shortUrl := h.Service.CreateShortURL(string(body))
 
 		// Пишем ответ в респонс
 		w.Header().Set("Content-Type", "text/plain")
@@ -51,14 +51,14 @@ func (h *Handler) SendUrl() http.HandlerFunc {
 	}
 }
 
-func (h *Handler) GetUrl() http.HandlerFunc {
+func (h *Handler) GetURL() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Получаем ссылку из пути
 		shortUrl := r.PathValue("id")
 
 		// Ищем ссылку в БД
-		fullUrl, err := h.Service.GetFullUrl(shortUrl)
+		fullUrl, err := h.Service.GetFullURL(shortUrl)
 
 		// Обрабатываем ошибку, если не нашли URL
 		if err != nil {

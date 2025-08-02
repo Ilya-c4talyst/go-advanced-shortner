@@ -13,7 +13,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Создание сервиса
-	shortService := service.NewUrlShortnerService()
+	shortService := service.NewURLShortnerService()
 
 	// Создание обработчика
 	handler.NewHandler(mux, shortService)

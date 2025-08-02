@@ -7,23 +7,23 @@ import (
 )
 
 // Структура для сервиса сокращения ссылок
-type UrlShortnerService struct {
+type URLShortnerService struct {
 	DB map[string]string
 }
 
 // Конструктор для сервиса
-func NewUrlShortnerService() *UrlShortnerService {
+func NewURLShortnerService() *URLShortnerService {
 
 	// Создание фековой БД
 	db := make(map[string]string)
 
-	return &UrlShortnerService{
+	return &URLShortnerService{
 		DB: db,
 	}
 }
 
 // Создание сокращенного URL
-func (u *UrlShortnerService) CreateShortUrl(url string) string {
+func (u *URLShortnerService) CreateShortURL(url string) string {
 
 	// Инициализация результата
 	var shortUrl string
@@ -43,12 +43,12 @@ func (u *UrlShortnerService) CreateShortUrl(url string) string {
 }
 
 // Получение полного URL
-func (u *UrlShortnerService) GetFullUrl(shortUrl string) (string, error) {
+func (u *URLShortnerService) GetFullURL(shortUrl string) (string, error) {
 
 	// Ищем полный URL в БД, или выдаем ошибку
 	if url, ok := u.DB[shortUrl]; ok {
 		return url, nil
 	} else {
-		return "", errors.New("Not found")
+		return "", errors.New("not found")
 	}
 }
