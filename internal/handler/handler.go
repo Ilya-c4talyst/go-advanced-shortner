@@ -42,12 +42,12 @@ func (h *Handler) SendURL() http.HandlerFunc {
 		defer r.Body.Close()
 
 		// Получаем сокращенную ссылку из сервиса
-		shortUrl := h.Service.CreateShortURL(string(body))
+		shortURL := h.Service.CreateShortURL(string(body))
 
 		// Пишем ответ в респонс
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("http://localhost:8080/" + shortUrl))
+		w.Write([]byte("http://localhost:8080/" + shortURL))
 	}
 }
 
@@ -55,10 +55,10 @@ func (h *Handler) GetURL() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Получаем ссылку из пути
-		shortUrl := r.PathValue("id")
+		shortURL := r.PathValue("id")
 
 		// Ищем ссылку в БД
-		fullURL, err := h.Service.GetFullURL(shortUrl)
+		fullURL, err := h.Service.GetFullURL(shortURL)
 
 		// Обрабатываем ошибку, если не нашли URL
 		if err != nil {
