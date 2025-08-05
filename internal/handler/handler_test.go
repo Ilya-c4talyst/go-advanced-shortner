@@ -10,21 +10,22 @@ import (
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/storage"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
 // Сет-ап для тестов
-func setupTest() (*http.ServeMux, *Handler) {
+func setupTest() (*gin.Engine, *Handler) {
 	db := storage.CreateDB()
 	repo := repository.NewShortenerRepository(db)
 	service := service.NewURLShortnerService(repo)
-	mux := http.NewServeMux()
+	ginEngine := gin.Default()
 	h := &Handler{Service: service}
 
 	// Инициализируем роуты
-	NewHandler(mux, service)
+	NewHandler(ginEngine, service)
 
-	return mux, h
+	return ginEngine, h
 }
 
 // Тесты для создания ссылки
@@ -114,7 +115,7 @@ func TestGetURLHandler(t *testing.T) {
 		req, err := http.NewRequest("GET", server.URL+"/nonexistent", nil)
 		assert.NoError(t, err)
 
-		resp, err := client.Do(req) // Используем наш клиент без авто-редиректов
+		resp, err := client.Do(req)
 		assert.NoError(t, err)
 		defer resp.Body.Close()
 

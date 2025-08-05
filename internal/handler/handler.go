@@ -1,75 +1,68 @@
 package handler
 
 import (
-	"io"
 	"net/http"
 	"strings"
 
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
+	"github.com/gin-gonic/gin"
 )
 
-// Структура хендера
+// Handler — структура хендлера
 type Handler struct {
 	Service *service.URLShortnerService
 }
 
 // Конструктор для хендлера
-func NewHandler(mux *http.ServeMux, service *service.URLShortnerService) {
-	handler := &Handler{
-		service,
-	}
-	mux.HandleFunc("POST /", handler.SendURL())
-	mux.HandleFunc("GET /{id}", handler.GetURL())
+func NewHandler(ginEngine *gin.Engine, service *service.URLShortnerService) {
+	handler := &Handler{Service: service}
+
+	// Регистрируем маршруты
+	ginEngine.POST("/", handler.SendURL)
+	ginEngine.GET("/:id", handler.GetURL)
 }
 
-// Обработка POST запроса
-func (h *Handler) SendURL() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// Обработка POST запроса: сокращение URL
+func (h *Handler) SendURL(c *gin.Context) {
 
-		// Проверка на тип контента
-		contentType := r.Header.Get("Content-Type")
-		if !strings.HasPrefix(strings.ToLower(contentType), "text/plain") {
-			http.Error(w, "Invalid ContentType, text/plain only", http.StatusBadRequest)
-			return
-		}
-
-		// Чтение тела запроса
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "Error reading request body", http.StatusBadRequest)
-			return
-		}
-		defer r.Body.Close()
-
-		// Получаем сокращенную ссылку из сервиса
-		shortURL := h.Service.CreateShortURL(string(body))
-
-		// Пишем ответ в респонс
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("http://localhost:8080/" + shortURL))
+	// Проверка Content-Type
+	contentType := c.GetHeader("Content-Type")
+	if !strings.HasPrefix(strings.ToLower(contentType), "text/plain") {
+		c.String(http.StatusBadRequest, "Invalid ContentType, text/plain only")
+		c.Abort()
+		return
 	}
+
+	// Чтение тела запроса
+	body, err := c.GetRawData()
+	if err != nil {
+		c.String(http.StatusBadRequest, "Error reading request body")
+		c.Abort()
+		return
+	}
+
+	// Создание короткой ссылки
+	shortURL := h.Service.CreateShortURL(string(body))
+
+	// Response: текст с полным URL
+	c.Header("Content-Type", "text/plain")
+	c.Status(http.StatusCreated)
+	c.String(http.StatusCreated, "http://localhost:8080/"+shortURL)
 }
 
-func (h *Handler) GetURL() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// Обработка GET запроса: редирект по короткой ссылке
+func (h *Handler) GetURL(c *gin.Context) {
+	// Получаем параметр из URL: /:id
+	shortURL := c.Param("id")
 
-		// Получаем ссылку из пути
-		shortURL := r.PathValue("id")
-
-		// Ищем ссылку в БД
-		fullURL, err := h.Service.GetFullURL(shortURL)
-
-		// Обрабатываем ошибку, если не нашли URL
-		if err != nil {
-			http.Error(w, "Error not found", http.StatusBadRequest)
-			return
-		}
-
-		// Пишем ответ в респонс
-		w.Header().Set("Location", fullURL)
-		w.WriteHeader(http.StatusTemporaryRedirect)
-		// Почему не проходит этот вариант...
-		// http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
+	// Ищем полную ссылку
+	fullURL, err := h.Service.GetFullURL(shortURL)
+	if err != nil {
+		c.String(http.StatusBadRequest, "URL not found")
+		c.Abort()
+		return
 	}
+
+	// Редирект (307)
+	c.Redirect(http.StatusTemporaryRedirect, fullURL)
 }
