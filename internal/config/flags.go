@@ -15,7 +15,7 @@ func parseFlags() (string, string) {
 
 	flag.Parse()
 
-	port := strings.Split(*portFlag, ":")[1]
+	port := ":" + strings.Split(*portFlag, ":")[1]
 	resAddress := *resAddressFlag
 
 	return port, resAddress
