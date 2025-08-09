@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"strings"
 )
 
 // parseFlags обрабатывает аргументы командной строки
@@ -14,7 +15,7 @@ func parseFlags() (string, string) {
 
 	flag.Parse()
 
-	port := ":" + *portFlag
+	port := strings.Split(*portFlag, ":")[1]
 	resAddress := *resAddressFlag
 
 	return port, resAddress

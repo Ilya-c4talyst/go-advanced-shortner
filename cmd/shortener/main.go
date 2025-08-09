@@ -33,6 +33,7 @@ func main() {
 
 	// Запуск сервера
 	fmt.Println(config.Configuration.Port)
+	fmt.Println(config.Configuration.ShortAddress)
 	err := http.ListenAndServe(config.Configuration.Port, ginEngine)
 	if err != nil {
 		log.Fatal(err)
