@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	// "github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/handler"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
@@ -13,6 +14,9 @@ import (
 )
 
 func main() {
+	// Чтение флагов
+	config.Configuration = config.GenerateConfig()
+
 	// Инициализация роутера
 	ginEngine := gin.Default()
 

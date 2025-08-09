@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/storage"
@@ -20,6 +21,10 @@ func setupTest() (*gin.Engine, *Handler) {
 	repo := repository.NewShortenerRepository(db)
 	service := service.NewURLShortnerService(repo)
 	ginEngine := gin.Default()
+	config.Configuration = &config.ConfigStruct{
+		Port:         ":8080",
+		ShortAddress: "http://localhost:8080",
+	}
 	h := &Handler{Service: service}
 
 	// Инициализируем роуты

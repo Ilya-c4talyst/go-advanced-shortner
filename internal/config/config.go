@@ -8,7 +8,7 @@ type ConfigStruct struct {
 }
 
 // Глобальная переменная для конфига
-var Configuration *ConfigStruct = GenerateConfig()
+var Configuration *ConfigStruct
 
 // Генерация конфигурации
 func GenerateConfig() *ConfigStruct {
