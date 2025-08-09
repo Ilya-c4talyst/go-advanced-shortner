@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -31,6 +32,7 @@ func main() {
 	handler.NewHandler(ginEngine, shortService)
 
 	// Запуск сервера
+	fmt.Println(config.Configuration.Port)
 	err := http.ListenAndServe(config.Configuration.Port, ginEngine)
 	if err != nil {
 		log.Fatal(err)
