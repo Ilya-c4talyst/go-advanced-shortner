@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/handler"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
@@ -26,7 +27,7 @@ func main() {
 	handler.NewHandler(ginEngine, shortService)
 
 	// Запуск сервера
-	err := http.ListenAndServe(":8080", ginEngine)
+	err := http.ListenAndServe(config.Configuration.Port, ginEngine)
 	if err != nil {
 		log.Fatal(err)
 	}

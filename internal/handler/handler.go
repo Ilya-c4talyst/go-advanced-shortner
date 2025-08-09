@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -47,7 +48,7 @@ func (h *Handler) SendURL(c *gin.Context) {
 	// Response: текст с полным URL
 	c.Header("Content-Type", "text/plain")
 	c.Status(http.StatusCreated)
-	c.String(http.StatusCreated, "http://localhost:8080/"+shortURL)
+	c.String(http.StatusCreated, config.Configuration.ShortAddress+"/"+shortURL)
 }
 
 // Обработка GET запроса: редирект по короткой ссылке
