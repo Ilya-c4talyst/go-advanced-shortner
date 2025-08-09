@@ -7,7 +7,7 @@ import (
 
 // parseFlags обрабатывает аргументы командной строки
 func parseFlags() (string, string) {
-	// адрес запуска HTTP-сервера значением :8080 по умолчанию
+	// адрес запуска HTTP-сервера значением localhost:8080 по умолчанию
 	portFlag := flag.String("a", "localhost:8080", "address and port to run server")
 
 	// базовый адрес результирующего сокращённого URL значением

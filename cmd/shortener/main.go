@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
-	// "github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/handler"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
@@ -32,8 +30,6 @@ func main() {
 	handler.NewHandler(ginEngine, shortService)
 
 	// Запуск сервера
-	fmt.Println(config.Configuration.Port)
-	fmt.Println(config.Configuration.ShortAddress)
 	err := http.ListenAndServe(config.Configuration.Port, ginEngine)
 	if err != nil {
 		log.Fatal(err)
