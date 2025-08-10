@@ -21,14 +21,14 @@ func setupTest() (*gin.Engine, *Handler) {
 	repo := repository.NewShortenerRepository(db)
 	service := service.NewURLShortnerService(repo)
 	ginEngine := gin.Default()
-	config.Configuration = &config.ConfigStruct{
+	configuration := &config.ConfigStruct{
 		Port:         ":8080",
 		ShortAddress: "http://localhost:8080",
 	}
 	h := &Handler{Service: service}
 
 	// Инициализируем роуты
-	NewHandler(ginEngine, service)
+	NewHandler(ginEngine, service, configuration)
 
 	return ginEngine, h
 }

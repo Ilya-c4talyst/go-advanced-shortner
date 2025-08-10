@@ -2,6 +2,8 @@ package config
 
 import (
 	"flag"
+	"log"
+	"os"
 	"strings"
 )
 
@@ -15,8 +17,23 @@ func parseFlags() (string, string) {
 
 	flag.Parse()
 
-	port := ":" + strings.Split(*portFlag, ":")[1]
+	// Проверка и обработка адреса сервера
+	portParts := strings.Split(*portFlag, ":")
+	if len(portParts) < 2 {
+		log.Printf("invalid address format: %s, expected format: host:port\n", *portFlag)
+		flag.Usage()
+		os.Exit(2)
+	}
+
+	port := ":" + portParts[1]
+
+	// Проверка базового адреса
 	resAddress := *resAddressFlag
+	if !strings.HasPrefix(resAddress, "http://") && !strings.HasPrefix(resAddress, "https://") {
+		log.Printf("invalid base address: %s, must start with http:// or https://\n", resAddress)
+		flag.Usage()
+		os.Exit(2)
+	}
 
 	return port, resAddress
 }

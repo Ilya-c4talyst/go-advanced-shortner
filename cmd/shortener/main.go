@@ -14,7 +14,7 @@ import (
 
 func main() {
 	// Чтение флагов
-	config.Configuration = config.GenerateConfig()
+	configuration := config.GenerateConfig()
 
 	// Инициализация роутера
 	ginEngine := gin.Default()
@@ -27,10 +27,10 @@ func main() {
 	shortService := service.NewURLShortnerService(repo)
 
 	// Создание обработчика
-	handler.NewHandler(ginEngine, shortService)
+	handler.NewHandler(ginEngine, shortService, configuration)
 
 	// Запуск сервера
-	err := http.ListenAndServe(config.Configuration.Port, ginEngine)
+	err := http.ListenAndServe(configuration.Port, ginEngine)
 	if err != nil {
 		log.Fatal(err)
 	}

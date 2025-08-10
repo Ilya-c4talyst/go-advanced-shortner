@@ -11,12 +11,20 @@ import (
 
 // Handler — структура хендлера
 type Handler struct {
-	Service *service.URLShortnerService
+	Service       *service.URLShortnerService
+	Configuration *config.ConfigStruct
 }
 
 // Конструктор для хендлера
-func NewHandler(ginEngine *gin.Engine, service *service.URLShortnerService) {
-	handler := &Handler{Service: service}
+func NewHandler(
+	ginEngine *gin.Engine,
+	service *service.URLShortnerService,
+	configuration *config.ConfigStruct,
+) {
+	handler := &Handler{
+		Service:       service,
+		Configuration: configuration,
+	}
 
 	// Регистрируем маршруты
 	ginEngine.POST("/", handler.SendURL)
@@ -48,7 +56,7 @@ func (h *Handler) SendURL(c *gin.Context) {
 	// Response: текст с полным URL
 	c.Header("Content-Type", "text/plain")
 	c.Status(http.StatusCreated)
-	c.String(http.StatusCreated, config.Configuration.ShortAddress+"/"+shortURL)
+	c.String(http.StatusCreated, h.Configuration.ShortAddress+"/"+shortURL)
 }
 
 // Обработка GET запроса: редирект по короткой ссылке

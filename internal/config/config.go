@@ -7,9 +7,6 @@ type ConfigStruct struct {
 	ShortAddress string
 }
 
-// Глобальная переменная для конфига
-var Configuration *ConfigStruct
-
 // Генерация конфигурации
 func GenerateConfig() *ConfigStruct {
 	// Получение данных из флагов
