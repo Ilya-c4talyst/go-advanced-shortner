@@ -35,5 +35,13 @@ func parseFlags() (string, string) {
 		os.Exit(2)
 	}
 
+	// Если параметры заданы через переменные окружения, используем их
+	if os.Getenv("SERVER_ADDRESS") != "" {
+		port = os.Getenv("SERVER_ADDRESS")
+	}
+	if os.Getenv("BASE_URL") != "" {
+		resAddress = os.Getenv("BASE_URL")
+	}
+
 	return port, resAddress
 }
