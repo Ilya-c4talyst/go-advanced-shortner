@@ -139,7 +139,7 @@ func TestSendJSONURLHandler(t *testing.T) {
 	// Успешное создание короткой ссылки через JSON
 	t.Run("successful short URL creation via JSON", func(t *testing.T) {
 		jsonBody := `{"url": "https://example.com/very/long/url/json"}`
-		req, err := http.NewRequest("POST", server.URL+"/shorten", bytes.NewBufferString(jsonBody))
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten", bytes.NewBufferString(jsonBody))
 		assert.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -148,7 +148,7 @@ func TestSendJSONURLHandler(t *testing.T) {
 		defer resp.Body.Close()
 
 		assert.Equal(t, http.StatusCreated, resp.StatusCode)
-		assert.Equal(t, "application/json; charset=utf-8", resp.Header.Get("Content-Type"))
+		assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 
 		body, err := io.ReadAll(resp.Body)
 		assert.NoError(t, err)
@@ -161,7 +161,7 @@ func TestSendJSONURLHandler(t *testing.T) {
 	// Неверный Content-Type
 	t.Run("invalid content type", func(t *testing.T) {
 		jsonBody := `{"url": "https://test.com"}`
-		req, err := http.NewRequest("POST", server.URL+"/shorten", bytes.NewBufferString(jsonBody))
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten", bytes.NewBufferString(jsonBody))
 		assert.NoError(t, err)
 		req.Header.Set("Content-Type", "text/plain")
 
@@ -175,7 +175,7 @@ func TestSendJSONURLHandler(t *testing.T) {
 	// Невалидный JSON
 	t.Run("invalid JSON", func(t *testing.T) {
 		invalidJSON := `{"url": "https://test.com",}` // trailing comma
-		req, err := http.NewRequest("POST", server.URL+"/shorten", bytes.NewBufferString(invalidJSON))
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten", bytes.NewBufferString(invalidJSON))
 		assert.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -190,7 +190,7 @@ func TestSendJSONURLHandler(t *testing.T) {
 	// Если сервис не валидирует отсутствие URL, изменим ожидание
 	t.Run("missing URL field", func(t *testing.T) {
 		jsonBody := `{"not_url": "https://test.com"}`
-		req, err := http.NewRequest("POST", server.URL+"/shorten", bytes.NewBufferString(jsonBody))
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten", bytes.NewBufferString(jsonBody))
 		assert.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -215,7 +215,7 @@ func TestSendJSONURLHandler(t *testing.T) {
 	// Пустой URL
 	t.Run("empty URL", func(t *testing.T) {
 		jsonBody := `{"url": ""}`
-		req, err := http.NewRequest("POST", server.URL+"/shorten", bytes.NewBufferString(jsonBody))
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten", bytes.NewBufferString(jsonBody))
 		assert.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -239,7 +239,7 @@ func TestSendJSONURLHandler(t *testing.T) {
 	// Проверка корректности формата ответа
 	t.Run("response format validation", func(t *testing.T) {
 		jsonBody := `{"url": "https://google.com"}`
-		req, err := http.NewRequest("POST", server.URL+"/shorten", bytes.NewBufferString(jsonBody))
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten", bytes.NewBufferString(jsonBody))
 		assert.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -292,7 +292,7 @@ func TestBothEndpointsCreateURLs(t *testing.T) {
 	t.Run("JSON endpoint creates short URL", func(t *testing.T) {
 		longURL := "https://json-endpoint-test.com"
 		jsonBody := `{"url": "` + longURL + `"}`
-		req, err := http.NewRequest("POST", server.URL+"/shorten", bytes.NewBufferString(jsonBody))
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten", bytes.NewBufferString(jsonBody))
 		assert.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
 
