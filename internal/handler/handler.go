@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
-	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/logger"
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/middleware"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/model"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
 	"github.com/gin-gonic/gin"
@@ -30,13 +30,14 @@ func NewHandler(
 		Configuration: configuration,
 	}
 
+	// Добавляем middleware перед регистрацией маршрутов
+	ginEngine.Use(middleware.GzipMiddleware())
+	ginEngine.Use(middleware.LoggingMiddleware())
+
 	// Регистрируем маршруты
 	ginEngine.POST("/api/shorten", handler.SendJSONURL)
 	ginEngine.POST("/", handler.SendURL)
 	ginEngine.GET("/:id", handler.GetURL)
-
-	// Добавляем middleware
-	ginEngine.Use(logger.LoggingMiddleware())
 }
 
 // Обработка POST запроса: сокращение URL
