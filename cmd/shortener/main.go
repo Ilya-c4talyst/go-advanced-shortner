@@ -33,8 +33,21 @@ func main() {
 	// Создание обработчика
 	handler.NewHandler(ginEngine, shortService, configuration)
 
+	// Загрузка данных из файла
+	err := db.LoadFromFile(configuration.FilePath)
+	if err != nil {
+		log.Fatalf("Ошибка загрузки данных из файла: %v", err)
+	}
+
+	defer func() {
+		log.Println("Сохранение данных перед завершением работы...")
+		if err := db.SaveToFile(configuration.FilePath); err != nil {
+			log.Printf("Ошибка сохранения данных: %v", err)
+		}
+	}()
+
 	// Запуск сервера
-	err := http.ListenAndServe(configuration.Port, ginEngine)
+	err = http.ListenAndServe(configuration.Port, ginEngine)
 	if err != nil {
 		log.Fatal(err)
 	}
