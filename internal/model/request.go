@@ -12,7 +12,7 @@ type Response struct {
 
 // Model for URL storage in JSON format
 type URLRecord struct {
-	UUID        string `json:"uuid"`
+	ID          int    `json:"id"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
