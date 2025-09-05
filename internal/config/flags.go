@@ -8,15 +8,18 @@ import (
 )
 
 // parseFlags обрабатывает аргументы командной строки
-func parseFlags() (string, string, string) {
+func parseFlags() (string, string, string, string) {
 	// адрес запуска HTTP-сервера значением localhost:8080 по умолчанию
 	portFlag := flag.String("a", "localhost:8080", "address and port to run server")
 
 	// базовый адрес результирующего сокращённого URL значением
 	resAddressFlag := flag.String("b", "http://localhost:8080", "address and port for short url")
 
-	// Добавление нового флага и переменной окружения для пути к файлу
+	// путь к файлу с урлами, значение data/urls.json по умолчанию
 	filePathFlag := flag.String("f", "data/urls.json", "path to the file for storing data")
+
+	// адрес для базы данных
+	addressFlagDB := flag.String("d", "postgres://myuser:mypassword@localhost:5432/mydb?sslmode=disable", "database address")
 
 	flag.Parse()
 
@@ -41,6 +44,9 @@ func parseFlags() (string, string, string) {
 	// Путь до файла с urls
 	filePath := *filePathFlag
 
+	// Адрес для базы данных
+	addressDB := *addressFlagDB
+
 	// Приоритет параметров согласно заданию:
 	// 1. Переменная окружения (наивысший приоритет)
 	// 2. Флаг командной строки
@@ -56,14 +62,18 @@ func parseFlags() (string, string, string) {
 			port = envServerAddr
 		}
 	}
-	
+
 	if envBaseURL := os.Getenv("BASE_URL"); envBaseURL != "" {
 		resAddress = envBaseURL
 	}
-	
+
 	if envFilePath := os.Getenv("FILE_STORAGE_PATH"); envFilePath != "" {
 		filePath = envFilePath
 	}
 
-	return port, resAddress, filePath
+	if envAddressDB := os.Getenv("DATABASE_DSN"); envAddressDB != "" {
+		addressDB = envAddressDB
+	}
+
+	return port, resAddress, filePath, addressDB
 }
