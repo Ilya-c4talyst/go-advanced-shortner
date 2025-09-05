@@ -9,3 +9,10 @@ type Request struct {
 type Response struct {
 	Result string `json:"result"`
 }
+
+// Model for URL storage in JSON format
+type URLRecord struct {
+	ID          int    `json:"id"`
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}

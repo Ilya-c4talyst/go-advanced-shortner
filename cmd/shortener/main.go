@@ -2,12 +2,12 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/handler"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/middleware"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/server"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -23,19 +23,26 @@ func main() {
 	// Инициализация роутера
 	ginEngine := gin.Default()
 
-	// Создание БД(пока фейк) и репозитория
+	// Создание БД и загрузка данных из файла
 	db := storage.CreateDB()
+	if err := db.LoadFromFile(configuration.FilePath); err != nil {
+		log.Fatalf("Ошибка загрузки данных из файла: %v", err)
+	}
+
+	// Создание репозитория
 	repo := repository.NewShortenerRepository(db)
 
 	// Создание сервиса
 	shortService := service.NewURLShortnerService(repo)
-
+	
 	// Создание обработчика
 	handler.NewHandler(ginEngine, shortService, configuration)
 
-	// Запуск сервера
-	err := http.ListenAndServe(configuration.Port, ginEngine)
-	if err != nil {
-		log.Fatal(err)
+	// Создание и запуск сервера с graceful shutdown
+	srv := server.NewServer(configuration.Port, ginEngine, db, configuration.FilePath)
+	if err := srv.Start(); err != nil {
+		log.Fatalf("Ошибка работы сервера: %v", err)
 	}
+
+	log.Println("Сервер завершён")
 }

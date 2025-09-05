@@ -8,12 +8,15 @@ import (
 )
 
 // parseFlags обрабатывает аргументы командной строки
-func parseFlags() (string, string) {
+func parseFlags() (string, string, string) {
 	// адрес запуска HTTP-сервера значением localhost:8080 по умолчанию
 	portFlag := flag.String("a", "localhost:8080", "address and port to run server")
 
 	// базовый адрес результирующего сокращённого URL значением
 	resAddressFlag := flag.String("b", "http://localhost:8080", "address and port for short url")
+
+	// Добавление нового флага и переменной окружения для пути к файлу
+	filePathFlag := flag.String("f", "data/urls.json", "path to the file for storing data")
 
 	flag.Parse()
 
@@ -35,13 +38,32 @@ func parseFlags() (string, string) {
 		os.Exit(2)
 	}
 
+	// Путь до файла с urls
+	filePath := *filePathFlag
+
+	// Приоритет параметров согласно заданию:
+	// 1. Переменная окружения (наивысший приоритет)
+	// 2. Флаг командной строки
+	// 3. Значение по умолчанию (уже установлено)
+
 	// Если параметры заданы через переменные окружения, используем их
-	if os.Getenv("SERVER_ADDRESS") != "" {
-		port = os.Getenv("SERVER_ADDRESS")
+	if envServerAddr := os.Getenv("SERVER_ADDRESS"); envServerAddr != "" {
+		// Обрабатываем переменную окружения SERVER_ADDRESS
+		envPortParts := strings.Split(envServerAddr, ":")
+		if len(envPortParts) >= 2 {
+			port = ":" + envPortParts[1]
+		} else {
+			port = envServerAddr
+		}
 	}
-	if os.Getenv("BASE_URL") != "" {
-		resAddress = os.Getenv("BASE_URL")
+	
+	if envBaseURL := os.Getenv("BASE_URL"); envBaseURL != "" {
+		resAddress = envBaseURL
+	}
+	
+	if envFilePath := os.Getenv("FILE_STORAGE_PATH"); envFilePath != "" {
+		filePath = envFilePath
 	}
 
-	return port, resAddress
+	return port, resAddress, filePath
 }
