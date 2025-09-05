@@ -38,6 +38,7 @@ func NewHandler(
 	ginEngine.POST("/api/shorten", handler.SendJSONURL)
 	ginEngine.POST("/", handler.SendURL)
 	ginEngine.GET("/:id", handler.GetURL)
+	ginEngine.GET("/ping", handler.Ping)
 }
 
 // Обработка POST запроса: сокращение URL
@@ -128,4 +129,14 @@ func (h *Handler) GetURL(c *gin.Context) {
 
 	// Редирект (307)
 	c.Redirect(http.StatusTemporaryRedirect, fullURL)
+}
+
+// Ping PostgreSQL
+func (h *Handler) Ping(c *gin.Context) {
+	if err := h.Service.PingPostgreSQL(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Abort()
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "OK"})
 }

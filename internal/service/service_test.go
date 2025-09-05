@@ -3,6 +3,7 @@ package service
 import (
 	"testing"
 
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/storage"
 	"github.com/stretchr/testify/assert"
@@ -12,7 +13,8 @@ func TestURLShortnerService(t *testing.T) {
 	// Инициализируем реальные зависимости
 	db := storage.CreateDB()
 	repo := repository.NewShortenerRepository(db)
-	service := NewURLShortnerService(repo)
+	configuration := config.ConfigStruct{}
+	service := NewURLShortnerService(repo, &configuration)
 
 	t.Run("Create and get short URL", func(t *testing.T) {
 		originalURL := "https://example.com/very/long/url"
@@ -65,5 +67,10 @@ func TestURLShortnerService(t *testing.T) {
 		fullURL, err := service.GetFullURL(shortURL)
 		assert.NoError(t, err)
 		assert.Equal(t, emptyURL, fullURL)
+	})
+
+	t.Run("DB error", func(t *testing.T) {
+		err := service.PingPostgreSQL()
+		assert.Error(t, err)
 	})
 }

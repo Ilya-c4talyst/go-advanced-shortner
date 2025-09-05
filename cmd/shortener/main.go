@@ -33,8 +33,8 @@ func main() {
 	repo := repository.NewShortenerRepository(db)
 
 	// Создание сервиса
-	shortService := service.NewURLShortnerService(repo)
-	
+	shortService := service.NewURLShortnerService(repo, configuration)
+
 	// Создание обработчика
 	handler.NewHandler(ginEngine, shortService, configuration)
 

@@ -1,22 +1,27 @@
 package service
 
 import (
+	"database/sql"
 	"errors"
 
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/pkg/utils"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // Структура для сервиса сокращения ссылок
 type URLShortnerService struct {
-	DB *repository.ShortenerRepository
+	DB            *repository.ShortenerRepository
+	Configuration *config.ConfigStruct
 }
 
 // Конструктор для сервиса
-func NewURLShortnerService(repo *repository.ShortenerRepository) *URLShortnerService {
+func NewURLShortnerService(repo *repository.ShortenerRepository, configuration *config.ConfigStruct) *URLShortnerService {
 
 	return &URLShortnerService{
-		DB: repo,
+		DB:            repo,
+		Configuration: configuration,
 	}
 }
 
@@ -49,4 +54,14 @@ func (u *URLShortnerService) GetFullURL(shortURL string) (string, error) {
 	} else {
 		return "", errors.New("not found")
 	}
+}
+
+// Ping DB
+func (u *URLShortnerService) PingPostgreSQL() error {
+	db, err := sql.Open("pgx", u.Configuration.AddressDB)
+	if err != nil {
+		return err
+	}
+	err = db.Ping()
+	return err
 }
