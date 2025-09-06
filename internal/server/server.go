@@ -9,25 +9,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/storage"
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
 )
 
 // Представляет HTTP сервер с graceful shutdown
 type Server struct {
 	httpServer *http.Server
-	db         *storage.DB
-	filePath   string
+	service    *service.URLShortnerService
 }
 
 // Создаёт новый сервер
-func NewServer(addr string, handler http.Handler, db *storage.DB, filePath string) *Server {
+func NewServer(addr string, handler http.Handler, service *service.URLShortnerService) *Server {
 	return &Server{
 		httpServer: &http.Server{
 			Addr:    addr,
 			Handler: handler,
 		},
-		db:       db,
-		filePath: filePath,
+		service: service,
 	}
 }
 
@@ -64,18 +62,18 @@ func (s *Server) shutdown() error {
 		return err
 	}
 
-	// Сохраняем данные перед завершением
-	return s.saveData()
+	// Закрываем соединение с репозиторием
+	return s.closeRepository()
 }
 
-// Сохраняет данные в файл
-func (s *Server) saveData() error {
-	log.Println("Сохранение данных...")
-	if err := s.db.SaveToFile(s.filePath); err != nil {
-		log.Printf("Ошибка сохранения данных: %v", err)
+// Закрывает соединение с репозиторием
+func (s *Server) closeRepository() error {
+	log.Println("Закрытие соединения с репозиторием...")
+	if err := s.service.Close(); err != nil {
+		log.Printf("Ошибка при закрытии репозитория: %v", err)
 		return err
 	}
 	
-	log.Println("Данные успешно сохранены")
+	log.Println("Соединение с репозиторием успешно закрыто")
 	return nil
 }

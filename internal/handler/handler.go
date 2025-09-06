@@ -61,7 +61,12 @@ func (h *Handler) SendURL(c *gin.Context) {
 	}
 
 	// Создание короткой ссылки
-	shortURL := h.Service.CreateShortURL(string(body))
+	shortURL, err := h.Service.CreateShortURL(string(body))
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Error creating short URL")
+		c.Abort()
+		return
+	}
 
 	// Response: текст с полным URL
 	c.Header("Content-Type", "text/plain")
@@ -103,7 +108,12 @@ func (h *Handler) SendJSONURL(c *gin.Context) {
 	}
 
 	// Создание короткой ссылки
-	shortURL := h.Service.CreateShortURL(request.URL)
+	shortURL, err := h.Service.CreateShortURL(request.URL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating short URL"})
+		c.Abort()
+		return
+	}
 
 	// Response: JSON с полным URL
 	var response model.Response

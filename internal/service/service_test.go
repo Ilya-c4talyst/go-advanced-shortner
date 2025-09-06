@@ -5,22 +5,22 @@ import (
 
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
-	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestURLShortnerService(t *testing.T) {
-	// Инициализируем реальные зависимости
-	db := storage.CreateDB()
-	repo := repository.NewShortenerRepository(db)
+	// Инициализируем репозиторий в памяти для тестов
+	repo := repository.NewMemoryRepository()
 	configuration := config.ConfigStruct{}
 	service := NewURLShortnerService(repo, &configuration)
+	defer service.Close()
 
 	t.Run("Create and get short URL", func(t *testing.T) {
 		originalURL := "https://example.com/very/long/url"
 
 		// Создаем короткую ссылку
-		shortURL := service.CreateShortURL(originalURL)
+		shortURL, err := service.CreateShortURL(originalURL)
+		assert.NoError(t, err)
 		assert.NotEmpty(t, shortURL)
 		assert.Len(t, shortURL, 6)
 
@@ -44,9 +44,11 @@ func TestURLShortnerService(t *testing.T) {
 		url2 := "https://second.com"
 
 		// Генерируем две короткие ссылки
-		short1 := service.CreateShortURL(url1)
-		short2 := service.CreateShortURL(url2)
+		short1, err1 := service.CreateShortURL(url1)
+		short2, err2 := service.CreateShortURL(url2)
 
+		assert.NoError(t, err1)
+		assert.NoError(t, err2)
 		assert.NotEqual(t, short1, short2)
 
 		// Проверяем, что они ведут на разные URL
@@ -61,7 +63,8 @@ func TestURLShortnerService(t *testing.T) {
 		emptyURL := ""
 
 		// Не должно паниковать при пустом URL
-		shortURL := service.CreateShortURL(emptyURL)
+		shortURL, err := service.CreateShortURL(emptyURL)
+		assert.NoError(t, err)
 		assert.NotEmpty(t, shortURL)
 
 		fullURL, err := service.GetFullURL(shortURL)
