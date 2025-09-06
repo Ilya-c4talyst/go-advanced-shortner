@@ -12,44 +12,44 @@ import (
 
 // Структура для сервиса сокращения ссылок
 type URLShortnerService struct {
-	DB            *repository.ShortenerRepository
+	Repository    repository.URLRepository
 	Configuration *config.ConfigStruct
 }
 
 // Конструктор для сервиса
-func NewURLShortnerService(repo *repository.ShortenerRepository, configuration *config.ConfigStruct) *URLShortnerService {
-
+func NewURLShortnerService(repo repository.URLRepository, configuration *config.ConfigStruct) *URLShortnerService {
 	return &URLShortnerService{
-		DB:            repo,
+		Repository:    repo,
 		Configuration: configuration,
 	}
 }
 
 // Создание сокращенного URL
-func (u *URLShortnerService) CreateShortURL(url string) string {
-
+func (u *URLShortnerService) CreateShortURL(url string) (string, error) {
 	// Инициализация результата
 	var shortURL string
 
-	// Генерируем сокращенную уникальную сслыку
+	// Генерируем сокращенную уникальную ссылку
 	for {
 		shortURL = utils.GenerateShortKey()
-		if _, err := u.DB.GetValue(shortURL); err == nil {
+		if _, err := u.Repository.GetValue(shortURL); err == nil {
 			continue
 		}
 		break
 	}
 
-	// Сохраняем в БД
-	u.DB.SetValue(shortURL, url)
-	return shortURL
+	// Сохраняем в репозитории
+	if err := u.Repository.SetValue(shortURL, url); err != nil {
+		return "", err
+	}
+	
+	return shortURL, nil
 }
 
 // Получение полного URL
 func (u *URLShortnerService) GetFullURL(shortURL string) (string, error) {
-
-	// Ищем полный URL в БД, или выдаем ошибку
-	if url, err := u.DB.GetValue(shortURL); err == nil {
+	// Ищем полный URL в репозитории, или выдаем ошибку
+	if url, err := u.Repository.GetValue(shortURL); err == nil {
 		return url, nil
 	} else {
 		return "", errors.New("not found")
@@ -62,6 +62,11 @@ func (u *URLShortnerService) PingPostgreSQL() error {
 	if err != nil {
 		return err
 	}
-	err = db.Ping()
-	return err
+	defer db.Close()
+	return db.Ping()
+}
+
+// Close закрывает соединение с репозиторием
+func (u *URLShortnerService) Close() error {
+	return u.Repository.Close()
 }

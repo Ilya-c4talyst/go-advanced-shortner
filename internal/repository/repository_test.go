@@ -3,21 +3,21 @@ package repository
 import (
 	"testing"
 
-	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShortenerRepository(t *testing.T) {
-	// Инициализация тестовой БД и репозитория
-	db := storage.CreateDB()
-	repo := NewShortenerRepository(db)
+func TestMemoryRepository(t *testing.T) {
+	// Инициализация репозитория в памяти
+	repo := NewMemoryRepository()
+	defer repo.Close()
 
 	t.Run("Set and Get value successfully", func(t *testing.T) {
 		key := "testKey"
 		value := "https://example.com"
 
 		// Записываем значение
-		repo.SetValue(key, value)
+		err := repo.SetValue(key, value)
+		assert.NoError(t, err)
 
 		// Получаем значение и проверяем
 		result, err := repo.GetValue(key)
@@ -41,13 +41,15 @@ func TestShortenerRepository(t *testing.T) {
 		secondValue := "https://second.com"
 
 		// Первая запись
-		repo.SetValue(key, firstValue)
+		err := repo.SetValue(key, firstValue)
+		assert.NoError(t, err)
 		firstResult, err := repo.GetValue(key)
 		assert.NoError(t, err)
 		assert.Equal(t, firstValue, firstResult)
 
 		// Перезаписываем
-		repo.SetValue(key, secondValue)
+		err = repo.SetValue(key, secondValue)
+		assert.NoError(t, err)
 		secondResult, err := repo.GetValue(key)
 		assert.NoError(t, err)
 		assert.Equal(t, secondValue, secondResult)

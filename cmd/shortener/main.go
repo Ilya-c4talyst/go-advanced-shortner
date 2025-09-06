@@ -9,7 +9,6 @@ import (
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/server"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
-	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/storage"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,14 +22,8 @@ func main() {
 	// Инициализация роутера
 	ginEngine := gin.Default()
 
-	// Создание БД и загрузка данных из файла
-	db := storage.CreateDB()
-	if err := db.LoadFromFile(configuration.FilePath); err != nil {
-		log.Fatalf("Ошибка загрузки данных из файла: %v", err)
-	}
-
-	// Создание репозитория
-	repo := repository.NewShortenerRepository(db)
+	// Создание репозитория в зависимости от конфигурации
+	repo := repository.CreateRepository(configuration.AddressDB, configuration.FilePath)
 
 	// Создание сервиса
 	shortService := service.NewURLShortnerService(repo, configuration)
@@ -39,7 +32,7 @@ func main() {
 	handler.NewHandler(ginEngine, shortService, configuration)
 
 	// Создание и запуск сервера с graceful shutdown
-	srv := server.NewServer(configuration.Port, ginEngine, db, configuration.FilePath)
+	srv := server.NewServer(configuration.Port, ginEngine, shortService)
 	if err := srv.Start(); err != nil {
 		log.Fatalf("Ошибка работы сервера: %v", err)
 	}

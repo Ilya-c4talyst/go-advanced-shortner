@@ -12,15 +12,13 @@ import (
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
-	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
 // Сет-ап для тестов
 func setupTest() (*gin.Engine, *Handler) {
-	db := storage.CreateDB()
-	repo := repository.NewShortenerRepository(db)
+	repo := repository.NewMemoryRepository()
 	configuration := &config.ConfigStruct{
 		Port:         ":8080",
 		ShortAddress: "http://localhost:8080",
@@ -94,7 +92,8 @@ func TestGetURLHandler(t *testing.T) {
 
 	// Предварительно создаем тестовую короткую ссылку
 	longURL := "https://redirect.me"
-	shortURL := h.Service.CreateShortURL(longURL)
+	shortURL, err := h.Service.CreateShortURL(longURL)
+	assert.NoError(t, err)
 
 	// Создаем клиент, который не следует за редиректами автоматически
 	client := &http.Client{
@@ -329,7 +328,8 @@ func TestRedirectIntegration(t *testing.T) {
 	t.Run("redirect works correctly", func(t *testing.T) {
 		// Создаем ссылку напрямую через сервис
 		longURL := "https://redirect-test.com"
-		shortURL := h.Service.CreateShortURL(longURL)
+		shortURL, err := h.Service.CreateShortURL(longURL)
+		assert.NoError(t, err)
 
 		// Проверяем редирект
 		req, err := http.NewRequest("GET", server.URL+"/"+shortURL, nil)
