@@ -36,6 +36,7 @@ func NewHandler(
 
 	// Регистрируем маршруты
 	ginEngine.POST("/api/shorten", handler.SendJSONURL)
+	ginEngine.POST("/api/shorten/batch", handler.SendJSONURLBatch)
 	ginEngine.POST("/", handler.SendURL)
 	ginEngine.GET("/:id", handler.GetURL)
 	ginEngine.GET("/ping", handler.Ping)
@@ -122,6 +123,74 @@ func (h *Handler) SendJSONURL(c *gin.Context) {
 	// Пишем ответ
 	c.Header("Content-Type", "application/json")
 	c.JSON(http.StatusCreated, response)
+}
+
+// Обработка POST запроса: пакетное сокращение URL (JSON)
+func (h *Handler) SendJSONURLBatch(c *gin.Context) {
+
+	// Проверка Content-Type
+	contentType := c.GetHeader("Content-Type")
+	if !strings.HasPrefix(strings.ToLower(contentType), "application/json") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ContentType, application/json only"})
+		c.Abort()
+		return
+	}
+
+	// Получаем данные из body
+	var requests []model.BatchRequest
+	if err := json.NewDecoder(c.Request.Body).Decode(&requests); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Abort()
+		return
+	}
+
+	// Проверяем, что пакет не пустой
+	if len(requests) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Empty batch not allowed"})
+		c.Abort()
+		return
+	}
+
+	// Валидация всех реквестов
+	validate := validator.New()
+	for _, request := range requests {
+		if err := validate.Struct(request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.Abort()
+			return
+		}
+	}
+
+	// Извлекаем URL из реквестов
+	urls := make([]string, len(requests))
+	correlationMap := make(map[string]string) // originalURL -> correlationID
+	for i, request := range requests {
+		urls[i] = request.OriginalURL
+		correlationMap[request.OriginalURL] = request.CorrelationID
+	}
+
+	// Создание коротких ссылок пакетом
+	shortURLsMap, err := h.Service.CreateShortURLsBatch(urls)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating short URLs"})
+		c.Abort()
+		return
+	}
+
+	// Формируем ответ
+	responses := make([]model.BatchResponse, 0, len(requests))
+	for originalURL, shortURL := range shortURLsMap {
+		if correlationID, exists := correlationMap[originalURL]; exists {
+			responses = append(responses, model.BatchResponse{
+				CorrelationID: correlationID,
+				ShortURL:      h.Configuration.ShortAddress + "/" + shortURL,
+			})
+		}
+	}
+
+	// Пишем ответ
+	c.Header("Content-Type", "application/json")
+	c.JSON(http.StatusCreated, responses)
 }
 
 // Обработка GET запроса: редирект по короткой ссылке

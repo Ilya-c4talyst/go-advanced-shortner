@@ -54,6 +54,19 @@ func (r *FileRepository) SetValue(shortURL, originalURL string) error {
 	return r.persistence.Save(r.filePath, r.data)
 }
 
+// SetValuesBatch сохраняет пакет пар короткий URL - оригинальный URL
+func (r *FileRepository) SetValuesBatch(pairs map[string]string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
+	for shortURL, originalURL := range pairs {
+		r.data[shortURL] = originalURL
+	}
+	
+	// Сохраняем в файл
+	return r.persistence.Save(r.filePath, r.data)
+}
+
 // Close закрывает соединение с хранилищем
 func (r *FileRepository) Close() error {
 	r.mu.RLock()

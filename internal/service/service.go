@@ -46,6 +46,44 @@ func (u *URLShortnerService) CreateShortURL(url string) (string, error) {
 	return shortURL, nil
 }
 
+// CreateShortURLsBatch создает сокращенные URL для пакета URL
+func (u *URLShortnerService) CreateShortURLsBatch(urls []string) (map[string]string, error) {
+	if len(urls) == 0 {
+		return make(map[string]string), nil
+	}
+
+	result := make(map[string]string)
+	pairs := make(map[string]string)
+
+	// Генерируем короткие URL для каждого исходного URL
+	for _, originalURL := range urls {
+		var shortURL string
+		
+		// Генерируем уникальную короткую ссылку
+		for {
+			shortURL = utils.GenerateShortKey()
+			if _, err := u.Repository.GetValue(shortURL); err == nil {
+				continue
+			}
+			// Проверяем также, что этот ключ не используется в текущем пакете
+			if _, exists := pairs[shortURL]; exists {
+				continue
+			}
+			break
+		}
+		
+		pairs[shortURL] = originalURL
+		result[originalURL] = shortURL
+	}
+
+	// Сохраняем пакет в репозитории
+	if err := u.Repository.SetValuesBatch(pairs); err != nil {
+		return nil, err
+	}
+	
+	return result, nil
+}
+
 // Получение полного URL
 func (u *URLShortnerService) GetFullURL(shortURL string) (string, error) {
 	// Ищем полный URL в репозитории, или выдаем ошибку

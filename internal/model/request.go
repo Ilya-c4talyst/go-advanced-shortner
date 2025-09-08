@@ -16,3 +16,15 @@ type URLRecord struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
+
+// Model for batch request
+type BatchRequest struct {
+	CorrelationID string `json:"correlation_id" validate:"required"`
+	OriginalURL   string `json:"original_url" validate:"required,url"`
+}
+
+// Model for batch response
+type BatchResponse struct {
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
+}
