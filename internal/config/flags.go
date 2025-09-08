@@ -19,7 +19,7 @@ func parseFlags() (string, string, string, string) {
 	filePathFlag := flag.String("f", "data/urls.json", "path to the file for storing data")
 
 	// адрес для базы данных
-	addressFlagDB := flag.String("d", "postgres://myuser:mypassword@localhost:5432/mydb?sslmode=disable", "database address")
+	addressFlagDB := flag.String("d", "", "database address")
 
 	flag.Parse()
 

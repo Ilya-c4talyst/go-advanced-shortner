@@ -31,6 +31,6 @@ func CreateRepository(databaseDSN, filePath string) URLRepository {
 
 // isDefaultPostgresValue проверяет, является ли значение DSN дефолтным значением из флагов
 func isDefaultPostgresValue(dsn string) bool {
-	defaultDSN := "postgres://myuser:mypassword@localhost:5432/mydb?sslmode=disable"
+	defaultDSN := ""
 	return dsn == defaultDSN
 }

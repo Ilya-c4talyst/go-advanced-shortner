@@ -70,29 +70,49 @@ func (r *PostgreSQLRepository) runMigrations(dsn string) error {
 // GetValue получает оригинальный URL по короткому
 func (r *PostgreSQLRepository) GetValue(shortURL string) (string, error) {
 	var originalURL string
-	err := r.pool.QueryRow(context.Background(), 
+	err := r.pool.QueryRow(context.Background(),
 		"SELECT original_url FROM urls WHERE short_url = $1", shortURL).Scan(&originalURL)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", errors.New("not found key in database")
 		}
 		return "", fmt.Errorf("failed to get value: %v", err)
 	}
-	
+
 	return originalURL, nil
 }
 
 // SetValue сохраняет пару короткий URL - оригинальный URL
 func (r *PostgreSQLRepository) SetValue(shortURL, originalURL string) error {
-	_, err := r.pool.Exec(context.Background(),
-		"INSERT INTO urls (short_url, original_url) VALUES ($1, $2) ON CONFLICT (short_url) DO UPDATE SET original_url = $2",
-		shortURL, originalURL)
-	
+	tx, err := r.pool.Begin(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to set value: %v", err)
+		return fmt.Errorf("failed to begin transaction: %v", err)
 	}
-	
+	defer tx.Rollback(context.Background())
+
+	// Удаляем любую запись с таким short_url (если она не та, что будет обновлена)
+	_, err = tx.Exec(context.Background(),
+		`DELETE FROM urls WHERE short_url = $1 AND original_url != $2`,
+		shortURL, originalURL)
+	if err != nil {
+		return fmt.Errorf("failed to delete conflicting short_url: %v", err)
+	}
+
+	// Вставляем или обновляем по original_url
+	_, err = tx.Exec(context.Background(),
+		`INSERT INTO urls (short_url, original_url) 
+		 VALUES ($1, $2)`,
+		shortURL, originalURL)
+	if err != nil {
+		return fmt.Errorf("failed to upsert url: %v", err)
+	}
+
+	err = tx.Commit(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %v", err)
+	}
+
 	return nil
 }
 
