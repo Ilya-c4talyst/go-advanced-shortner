@@ -142,24 +142,28 @@ func (r *PostgreSQLRepository) SetValuesBatch(pairs map[string]string) error {
 	}
 	defer tx.Rollback(context.Background())
 
+	// Подготавливаем пакетную вставку
 	for shortURL, originalURL := range pairs {
-		var result string
-		err = tx.QueryRow(context.Background(),
-			`INSERT INTO urls (short_url, original_url)
-			 VALUES ($1, $2)
-			 ON CONFLICT (short_url) DO NOTHING
-			 RETURNING short_url`,
-			shortURL, originalURL).Scan(&result)
-
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrRowExists
-		}
+		// Удаляем любую запись с таким short_url (если она не та, что будет обновлена)
+		_, err = tx.Exec(context.Background(),
+			`DELETE FROM urls WHERE short_url = $1 AND original_url != $2`,
+			shortURL, originalURL)
 		if err != nil {
-			return fmt.Errorf("failed to insert url: %v", err)
+			return fmt.Errorf("failed to delete conflicting short_url: %v", err)
+		}
+
+		// Вставляем или обновляем по original_url
+		_, err = tx.Exec(context.Background(),
+			`INSERT INTO urls (short_url, original_url) 
+			 VALUES ($1, $2)`,
+			shortURL, originalURL)
+		if err != nil {
+			return fmt.Errorf("failed to upsert url: %v", err)
 		}
 	}
 
-	if err = tx.Commit(context.Background()); err != nil {
+	err = tx.Commit(context.Background())
+	if err != nil {
 		return fmt.Errorf("failed to commit transaction: %v", err)
 	}
 
