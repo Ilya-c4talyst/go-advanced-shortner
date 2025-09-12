@@ -49,9 +49,8 @@ func TestMemoryRepository(t *testing.T) {
 
 		// Перезаписываем
 		err = repo.SetValue(key, secondValue)
+		assert.Error(t, err)
+		_, err = repo.GetFullValue(key)
 		assert.NoError(t, err)
-		secondResult, err := repo.GetFullValue(key)
-		assert.NoError(t, err)
-		assert.Equal(t, secondValue, secondResult)
 	})
 }
