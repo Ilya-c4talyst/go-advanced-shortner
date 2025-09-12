@@ -20,7 +20,7 @@ func TestMemoryRepository(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Получаем значение и проверяем
-		result, err := repo.GetValue(key)
+		result, err := repo.GetFullValue(key)
 		assert.NoError(t, err)
 		assert.Equal(t, value, result)
 	})
@@ -29,7 +29,7 @@ func TestMemoryRepository(t *testing.T) {
 		nonExistentKey := "nonExistentKey"
 
 		// Пытаемся получить несуществующий ключ
-		result, err := repo.GetValue(nonExistentKey)
+		result, err := repo.GetFullValue(nonExistentKey)
 		assert.Error(t, err)
 		assert.Equal(t, "", result)
 		assert.Equal(t, "not found key in database", err.Error())
@@ -43,15 +43,14 @@ func TestMemoryRepository(t *testing.T) {
 		// Первая запись
 		err := repo.SetValue(key, firstValue)
 		assert.NoError(t, err)
-		firstResult, err := repo.GetValue(key)
+		firstResult, err := repo.GetFullValue(key)
 		assert.NoError(t, err)
 		assert.Equal(t, firstValue, firstResult)
 
 		// Перезаписываем
 		err = repo.SetValue(key, secondValue)
+		assert.Error(t, err)
+		_, err = repo.GetFullValue(key)
 		assert.NoError(t, err)
-		secondResult, err := repo.GetValue(key)
-		assert.NoError(t, err)
-		assert.Equal(t, secondValue, secondResult)
 	})
 }

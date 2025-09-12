@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"maps"
 	"errors"
 	"sync"
 )
@@ -20,12 +19,25 @@ func NewMemoryRepository() URLRepository {
 }
 
 // GetValue получает оригинальный URL по короткому
-func (r *MemoryRepository) GetValue(shortURL string) (string, error) {
+func (r *MemoryRepository) GetFullValue(shortURL string) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	if value, ok := r.data[shortURL]; ok {
 		return value, nil
+	}
+	return "", errors.New("not found key in database")
+}
+
+// GetShortValue получает короткий URL по оригинальному
+func (r *MemoryRepository) GetShortValue(originalURL string) (string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	for short, long := range r.data {
+		if long == originalURL {
+			return short, nil
+		}
 	}
 	return "", errors.New("not found key in database")
 }
@@ -34,7 +46,9 @@ func (r *MemoryRepository) GetValue(shortURL string) (string, error) {
 func (r *MemoryRepository) SetValue(shortURL, originalURL string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+	if _, ok := r.data[shortURL]; ok {
+		return ErrRowExists
+	}
 	r.data[shortURL] = originalURL
 	return nil
 }
@@ -43,8 +57,13 @@ func (r *MemoryRepository) SetValue(shortURL, originalURL string) error {
 func (r *MemoryRepository) SetValuesBatch(pairs map[string]string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
-	maps.Copy(r.data, pairs)
+
+	for key, value := range pairs {
+		if _, ok := r.data[key]; ok {
+			return ErrRowExists
+		}
+		r.data[key] = value
+	}
 	return nil
 }
 

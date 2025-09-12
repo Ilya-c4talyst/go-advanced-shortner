@@ -1,8 +1,12 @@
 package repository
 
 import (
+	"errors"
 	"log"
 )
+
+// ErrRowExists ошибка, которая возникает, когда запись уже существует
+var ErrRowExists = errors.New("short URL already exists")
 
 // CreateRepository создает репозиторий в зависимости от конфигурации
 // Приоритет: PostgreSQL -> File -> Memory

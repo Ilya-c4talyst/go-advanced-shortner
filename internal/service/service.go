@@ -32,7 +32,7 @@ func (u *URLShortnerService) CreateShortURL(url string) (string, error) {
 	// Генерируем сокращенную уникальную ссылку
 	for {
 		shortURL = utils.GenerateShortKey()
-		if _, err := u.Repository.GetValue(shortURL); err == nil {
+		if _, err := u.Repository.GetFullValue(shortURL); err == nil {
 			continue
 		}
 		break
@@ -40,9 +40,15 @@ func (u *URLShortnerService) CreateShortURL(url string) (string, error) {
 
 	// Сохраняем в репозитории
 	if err := u.Repository.SetValue(shortURL, url); err != nil {
+		if errors.Is(err, repository.ErrRowExists) {
+			// Если ссылка уже существует
+			if shortURL, err = u.Repository.GetShortValue(url); err == nil {
+				return shortURL, repository.ErrRowExists
+			}
+		}
 		return "", err
 	}
-	
+
 	return shortURL, nil
 }
 
@@ -58,11 +64,11 @@ func (u *URLShortnerService) CreateShortURLsBatch(urls []string) (map[string]str
 	// Генерируем короткие URL для каждого исходного URL
 	for _, originalURL := range urls {
 		var shortURL string
-		
+
 		// Генерируем уникальную короткую ссылку
 		for {
 			shortURL = utils.GenerateShortKey()
-			if _, err := u.Repository.GetValue(shortURL); err == nil {
+			if _, err := u.Repository.GetFullValue(shortURL); err == nil {
 				continue
 			}
 			// Проверяем также, что этот ключ не используется в текущем пакете
@@ -71,7 +77,7 @@ func (u *URLShortnerService) CreateShortURLsBatch(urls []string) (map[string]str
 			}
 			break
 		}
-		
+
 		pairs[shortURL] = originalURL
 		result[originalURL] = shortURL
 	}
@@ -80,14 +86,14 @@ func (u *URLShortnerService) CreateShortURLsBatch(urls []string) (map[string]str
 	if err := u.Repository.SetValuesBatch(pairs); err != nil {
 		return nil, err
 	}
-	
+
 	return result, nil
 }
 
 // Получение полного URL
 func (u *URLShortnerService) GetFullURL(shortURL string) (string, error) {
 	// Ищем полный URL в репозитории, или выдаем ошибку
-	if url, err := u.Repository.GetValue(shortURL); err == nil {
+	if url, err := u.Repository.GetFullValue(shortURL); err == nil {
 		return url, nil
 	} else {
 		return "", errors.New("not found")
