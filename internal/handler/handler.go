@@ -2,12 +2,14 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/middleware"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/model"
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/repository"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
@@ -64,7 +66,11 @@ func (h *Handler) SendURL(c *gin.Context) {
 	// Создание короткой ссылки
 	shortURL, err := h.Service.CreateShortURL(string(body))
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Error creating short URL")
+		if errors.Is(err, repository.ErrRowExists) {
+			c.String(http.StatusConflict, h.Configuration.ShortAddress+"/"+shortURL)
+		} else {
+			c.String(http.StatusInternalServerError, err.Error())
+		}
 		c.Abort()
 		return
 	}
@@ -111,7 +117,13 @@ func (h *Handler) SendJSONURL(c *gin.Context) {
 	// Создание короткой ссылки
 	shortURL, err := h.Service.CreateShortURL(request.URL)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating short URL"})
+		if errors.Is(err, repository.ErrRowExists) {
+			var response model.Response
+			response.Result = h.Configuration.ShortAddress + "/" + shortURL
+			c.JSON(http.StatusConflict, response)
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		c.Abort()
 		return
 	}
@@ -172,7 +184,7 @@ func (h *Handler) SendJSONURLBatch(c *gin.Context) {
 	// Создание коротких ссылок пакетом
 	shortURLsMap, err := h.Service.CreateShortURLsBatch(urls)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating short URLs"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating short URL"})
 		c.Abort()
 		return
 	}
