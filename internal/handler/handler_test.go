@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -341,5 +342,152 @@ func TestRedirectIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
 		assert.Equal(t, longURL, resp.Header.Get("Location"))
+	})
+}
+
+// Тесты для batch обработчика создания коротких ссылок
+func TestSendJSONURLBatchHandler(t *testing.T) {
+	mux, _ := setupTest()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	// Успешное создание коротких ссылок через batch JSON
+	t.Run("successful batch short URL creation", func(t *testing.T) {
+		jsonBody := `[
+			{"correlation_id": "1", "original_url": "https://example1.com"},
+			{"correlation_id": "2", "original_url": "https://example2.com"},
+			{"correlation_id": "3", "original_url": "https://example3.com"}
+		]`
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten/batch", bytes.NewBufferString(jsonBody))
+		assert.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusCreated, resp.StatusCode)
+		assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+
+		body, err := io.ReadAll(resp.Body)
+		assert.NoError(t, err)
+
+		var responses []map[string]string
+		err = json.Unmarshal(body, &responses)
+		assert.NoError(t, err)
+
+		// Проверяем что получили 3 ответа
+		assert.Len(t, responses, 3)
+
+		// Проверяем что все correlation_id присутствуют
+		correlationIDs := map[string]bool{}
+		for _, response := range responses {
+			correlationIDs[response["correlation_id"]] = true
+			assert.Contains(t, response["short_url"], "http://localhost:8080/")
+		}
+		assert.True(t, correlationIDs["1"])
+		assert.True(t, correlationIDs["2"])
+		assert.True(t, correlationIDs["3"])
+	})
+
+	// Пустой batch
+	t.Run("empty batch request", func(t *testing.T) {
+		jsonBody := `[]`
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten/batch", bytes.NewBufferString(jsonBody))
+		assert.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	// Неверный Content-Type
+	t.Run("invalid content type for batch", func(t *testing.T) {
+		jsonBody := `[{"correlation_id": "1", "original_url": "https://test.com"}]`
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten/batch", bytes.NewBufferString(jsonBody))
+		assert.NoError(t, err)
+		req.Header.Set("Content-Type", "text/plain")
+
+		resp, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	// Невалидный JSON
+	t.Run("invalid JSON for batch", func(t *testing.T) {
+		invalidJSON := `[{"correlation_id": "1", "original_url": "https://test.com",}]` // trailing comma
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten/batch", bytes.NewBufferString(invalidJSON))
+		assert.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	// Отсутствующие обязательные поля
+	t.Run("missing required fields", func(t *testing.T) {
+		jsonBody := `[{"correlation_id": "1"}]` // отсутствует original_url
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten/batch", bytes.NewBufferString(jsonBody))
+		assert.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	// Невалидные URL
+	t.Run("invalid URLs in batch", func(t *testing.T) {
+		jsonBody := `[{"correlation_id": "1", "original_url": "not-a-valid-url"}]`
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten/batch", bytes.NewBufferString(jsonBody))
+		assert.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	// Большой batch
+	t.Run("large batch request", func(t *testing.T) {
+		var requests []map[string]string
+		for i := 1; i <= 100; i++ {
+			requests = append(requests, map[string]string{
+				"correlation_id": fmt.Sprintf("id_%d", i),
+				"original_url":   fmt.Sprintf("https://example%d.com", i),
+			})
+		}
+
+		jsonBody, err := json.Marshal(requests)
+		assert.NoError(t, err)
+
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten/batch", bytes.NewBufferString(string(jsonBody)))
+		assert.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+		var responses []map[string]string
+		err = json.NewDecoder(resp.Body).Decode(&responses)
+		assert.NoError(t, err)
+
+		// Проверяем что получили 100 ответов
+		assert.Len(t, responses, 100)
 	})
 }

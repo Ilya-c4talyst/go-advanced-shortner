@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"maps"
 	"errors"
 	"sync"
 )
@@ -35,6 +36,15 @@ func (r *MemoryRepository) SetValue(shortURL, originalURL string) error {
 	defer r.mu.Unlock()
 	
 	r.data[shortURL] = originalURL
+	return nil
+}
+
+// SetValuesBatch сохраняет пакет пар короткий URL - оригинальный URL
+func (r *MemoryRepository) SetValuesBatch(pairs map[string]string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
+	maps.Copy(r.data, pairs)
 	return nil
 }
 
