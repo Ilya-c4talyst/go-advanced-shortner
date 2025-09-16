@@ -44,34 +44,61 @@ func NewHandler(
 	ginEngine.GET("/ping", handler.Ping)
 }
 
+// handleServiceError обрабатывает ошибки сервиса и отправляет соответствующий текстовый ответ
+func (h *Handler) handleServiceError(c *gin.Context, err error, shortURL string) {
+	if errors.Is(err, repository.ErrRowExists) {
+		c.String(http.StatusConflict, h.Configuration.ShortAddress+"/"+shortURL)
+	} else {
+		c.String(http.StatusInternalServerError, err.Error())
+	}
+	c.Abort()
+}
+
+// handleServiceErrorJSON обрабатывает ошибки сервиса и отправляет соответствующий JSON ответ
+func (h *Handler) handleServiceErrorJSON(c *gin.Context, err error, shortURL string) {
+	if errors.Is(err, repository.ErrRowExists) {
+		var response model.Response
+		response.Result = h.Configuration.ShortAddress + "/" + shortURL
+		c.JSON(http.StatusConflict, response)
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	c.Abort()
+}
+
+// handleGenericErrorJSON обрабатывает общие ошибки и отправляет JSON ответ
+func (h *Handler) handleGenericErrorJSON(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, gin.H{"error": message})
+	c.Abort()
+}
+
+// handleGenericErrorText обрабатывает общие ошибки и отправляет текстовый ответ
+func (h *Handler) handleGenericErrorText(c *gin.Context, statusCode int, message string) {
+	c.String(statusCode, message)
+	c.Abort()
+}
+
 // Обработка POST запроса: сокращение URL
 func (h *Handler) SendURL(c *gin.Context) {
 
 	// Проверка Content-Type
 	contentType := c.GetHeader("Content-Type")
 	if !strings.HasPrefix(strings.ToLower(contentType), "text/plain") {
-		c.String(http.StatusBadRequest, "Invalid ContentType, text/plain only")
-		c.Abort()
+		h.handleGenericErrorText(c, http.StatusBadRequest, "Invalid ContentType, text/plain only")
 		return
 	}
 
 	// Чтение тела запроса
 	body, err := c.GetRawData()
 	if err != nil {
-		c.String(http.StatusBadRequest, "Error reading request body")
-		c.Abort()
+		h.handleGenericErrorText(c, http.StatusBadRequest, "Error reading request body")
 		return
 	}
 
 	// Создание короткой ссылки
 	shortURL, err := h.Service.CreateShortURL(string(body))
 	if err != nil {
-		if errors.Is(err, repository.ErrRowExists) {
-			c.String(http.StatusConflict, h.Configuration.ShortAddress+"/"+shortURL)
-		} else {
-			c.String(http.StatusInternalServerError, err.Error())
-		}
-		c.Abort()
+		h.handleServiceError(c, err, shortURL)
 		return
 	}
 
@@ -86,8 +113,7 @@ func (h *Handler) SendJSONURL(c *gin.Context) {
 	// Проверка Content-Type
 	contentType := c.GetHeader("Content-Type")
 	if !strings.HasPrefix(strings.ToLower(contentType), "application/json") {
-		c.String(http.StatusBadRequest, "Invalid ContentType, application/json only")
-		c.Abort()
+		h.handleGenericErrorText(c, http.StatusBadRequest, "Invalid ContentType, application/json only")
 		return
 	}
 
@@ -100,8 +126,7 @@ func (h *Handler) SendJSONURL(c *gin.Context) {
 	// 	return
 	// }
 	if err := json.NewDecoder(c.Request.Body).Decode(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		c.Abort()
+		h.handleGenericErrorJSON(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -109,22 +134,14 @@ func (h *Handler) SendJSONURL(c *gin.Context) {
 	validate := validator.New()
 	err := validate.Struct(request)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		c.Abort()
+		h.handleGenericErrorJSON(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Создание короткой ссылки
 	shortURL, err := h.Service.CreateShortURL(request.URL)
 	if err != nil {
-		if errors.Is(err, repository.ErrRowExists) {
-			var response model.Response
-			response.Result = h.Configuration.ShortAddress + "/" + shortURL
-			c.JSON(http.StatusConflict, response)
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
-		c.Abort()
+		h.handleServiceErrorJSON(c, err, shortURL)
 		return
 	}
 
@@ -143,23 +160,20 @@ func (h *Handler) SendJSONURLBatch(c *gin.Context) {
 	// Проверка Content-Type
 	contentType := c.GetHeader("Content-Type")
 	if !strings.HasPrefix(strings.ToLower(contentType), "application/json") {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ContentType, application/json only"})
-		c.Abort()
+		h.handleGenericErrorJSON(c, http.StatusBadRequest, "Invalid ContentType, application/json only")
 		return
 	}
 
 	// Получаем данные из body
 	var requests []model.BatchRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&requests); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		c.Abort()
+		h.handleGenericErrorJSON(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Проверяем, что пакет не пустой
 	if len(requests) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Empty batch not allowed"})
-		c.Abort()
+		h.handleGenericErrorJSON(c, http.StatusBadRequest, "Empty batch not allowed")
 		return
 	}
 
@@ -167,8 +181,7 @@ func (h *Handler) SendJSONURLBatch(c *gin.Context) {
 	validate := validator.New()
 	for _, request := range requests {
 		if err := validate.Struct(request); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			c.Abort()
+			h.handleGenericErrorJSON(c, http.StatusBadRequest, err.Error())
 			return
 		}
 	}
@@ -184,8 +197,7 @@ func (h *Handler) SendJSONURLBatch(c *gin.Context) {
 	// Создание коротких ссылок пакетом
 	shortURLsMap, err := h.Service.CreateShortURLsBatch(urls)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating short URL"})
-		c.Abort()
+		h.handleGenericErrorJSON(c, http.StatusInternalServerError, "Error creating short URL")
 		return
 	}
 
@@ -213,8 +225,7 @@ func (h *Handler) GetURL(c *gin.Context) {
 	// Ищем полную ссылку
 	fullURL, err := h.Service.GetFullURL(shortURL)
 	if err != nil {
-		c.String(http.StatusBadRequest, "URL not found")
-		c.Abort()
+		h.handleGenericErrorText(c, http.StatusBadRequest, "URL not found")
 		return
 	}
 
@@ -225,8 +236,7 @@ func (h *Handler) GetURL(c *gin.Context) {
 // Ping PostgreSQL
 func (h *Handler) Ping(c *gin.Context) {
 	if err := h.Service.PingPostgreSQL(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		c.Abort()
+		h.handleGenericErrorJSON(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "OK"})

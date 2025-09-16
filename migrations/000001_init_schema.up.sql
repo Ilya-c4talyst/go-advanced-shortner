@@ -7,3 +7,4 @@ CREATE TABLE IF NOT EXISTS urls (
 );
 
 CREATE UNIQUE INDEX idx_urls_original_url ON urls(original_url);
+CREATE UNIQUE INDEX idx_urls_short_url ON urls(short_url);
