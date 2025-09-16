@@ -10,6 +10,7 @@ import (
 // FileRepository реализация репозитория для хранения в файле
 type FileRepository struct {
 	data        map[string]string
+	reversedData map[string]string
 	mu          sync.RWMutex
 	filePath    string
 	persistence persistence.JSONPersistence
@@ -19,6 +20,7 @@ type FileRepository struct {
 func NewFileRepository(filePath string) URLRepository {
 	repo := &FileRepository{
 		data:        make(map[string]string),
+		reversedData: make(map[string]string),
 		filePath:    filePath,
 		persistence: persistence.NewFileJSONPersistence(),
 	}
@@ -27,6 +29,11 @@ func NewFileRepository(filePath string) URLRepository {
 	data, _, err := repo.persistence.Load(filePath)
 	if err == nil {
 		repo.data = data
+	}
+
+	// Формирование обратной мапы
+	for originalURL, shortURL := range data {
+		repo.reversedData[originalURL] = shortURL
 	}
 
 	return repo
@@ -48,10 +55,8 @@ func (r *FileRepository) GetShortValue(originalURL string) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	for short, long := range r.data {
-		if long == originalURL {
-			return short, nil
-		}
+	if value, ok := r.reversedData[originalURL]; ok {
+		return value, nil
 	}
 	return "", errors.New("not found key in database")
 }
