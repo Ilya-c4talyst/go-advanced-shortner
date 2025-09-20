@@ -31,7 +31,7 @@ func NewHandler(
 ) {
 	// Создаем сервис аутентификации
 	authService := auth.NewAuthService(configuration.AuthSecretKey)
-	
+
 	handler := &Handler{
 		Service:       service,
 		Configuration: configuration,
@@ -49,13 +49,8 @@ func NewHandler(
 	ginEngine.POST("/", handler.SendURL)
 	ginEngine.GET("/:id", handler.GetURL)
 	ginEngine.GET("/ping", handler.Ping)
-	
-	// Защищенный маршрут для получения URL пользователя
-	userGroup := ginEngine.Group("/api/user")
-	userGroup.Use(middleware.RequireAuthMiddleware(authService))
-	{
-		userGroup.GET("/urls", handler.GetUserURLs)
-	}
+
+	ginEngine.GET("/api/user/urls", handler.GetUserURLs)
 }
 
 // handleServiceError обрабатывает ошибки сервиса и отправляет соответствующий текстовый ответ
