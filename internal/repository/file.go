@@ -10,6 +10,7 @@ import (
 // FileRepository реализация репозитория для хранения в файле
 type FileRepository struct {
 	data        map[string]string
+	reversedData map[string]string
 	mu          sync.RWMutex
 	filePath    string
 	persistence persistence.JSONPersistence
@@ -19,25 +20,42 @@ type FileRepository struct {
 func NewFileRepository(filePath string) URLRepository {
 	repo := &FileRepository{
 		data:        make(map[string]string),
+		reversedData: make(map[string]string),
 		filePath:    filePath,
 		persistence: persistence.NewFileJSONPersistence(),
 	}
-	
+
 	// Загружаем данные из файла при инициализации
 	data, _, err := repo.persistence.Load(filePath)
 	if err == nil {
 		repo.data = data
 	}
-	
+
+	// Формирование обратной мапы
+	for originalURL, shortURL := range data {
+		repo.reversedData[originalURL] = shortURL
+	}
+
 	return repo
 }
 
-// GetValue получает оригинальный URL по короткому
-func (r *FileRepository) GetValue(shortURL string) (string, error) {
+// GetFullValue получает оригинальный URL по короткому
+func (r *FileRepository) GetFullValue(shortURL string) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	if value, ok := r.data[shortURL]; ok {
+		return value, nil
+	}
+	return "", errors.New("not found key in database")
+}
+
+// GetShortValue получает короткий URL по оригинальному
+func (r *FileRepository) GetShortValue(originalURL string) (string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if value, ok := r.reversedData[originalURL]; ok {
 		return value, nil
 	}
 	return "", errors.New("not found key in database")
@@ -47,9 +65,12 @@ func (r *FileRepository) GetValue(shortURL string) (string, error) {
 func (r *FileRepository) SetValue(shortURL, originalURL string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
+	if _, ok := r.data[shortURL]; ok {
+		return ErrRowExists
+	}
 	r.data[shortURL] = originalURL
-	
+
 	// Сохраняем в файл
 	return r.persistence.Save(r.filePath, r.data)
 }
@@ -58,11 +79,14 @@ func (r *FileRepository) SetValue(shortURL, originalURL string) error {
 func (r *FileRepository) SetValuesBatch(pairs map[string]string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
-	for shortURL, originalURL := range pairs {
-		r.data[shortURL] = originalURL
+
+	for key, value := range pairs {
+		if _, ok := r.data[key]; ok {
+			return ErrRowExists
+		}
+		r.data[key] = value
 	}
-	
+
 	// Сохраняем в файл
 	return r.persistence.Save(r.filePath, r.data)
 }
@@ -71,7 +95,7 @@ func (r *FileRepository) SetValuesBatch(pairs map[string]string) error {
 func (r *FileRepository) Close() error {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	// Финальное сохранение в файл
 	return r.persistence.Save(r.filePath, r.data)
 }
