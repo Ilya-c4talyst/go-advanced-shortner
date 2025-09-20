@@ -21,6 +21,7 @@ func TestAuthService(t *testing.T) {
 	cookie := authService.CreateSignedCookie(userID)
 	if cookie == nil {
 		t.Error("Cookie should not be nil")
+		return // Добавляем return чтобы избежать дальнейшего выполнения
 	}
 	if cookie.Name != "user_id" {
 		t.Errorf("Cookie name should be 'user_id', got %s", cookie.Name)
