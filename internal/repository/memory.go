@@ -7,14 +7,16 @@ import (
 
 // MemoryRepository реализация репозитория для хранения в памяти
 type MemoryRepository struct {
-	data map[string]string
-	mu   sync.RWMutex
+	data    map[string]string // shortURL -> originalURL
+	userMap map[string]string // shortURL -> userID
+	mu      sync.RWMutex
 }
 
 // NewMemoryRepository создает новый репозиторий для работы с памятью
 func NewMemoryRepository() URLRepository {
 	return &MemoryRepository{
-		data: make(map[string]string),
+		data:    make(map[string]string),
+		userMap: make(map[string]string),
 	}
 }
 
@@ -42,19 +44,20 @@ func (r *MemoryRepository) GetShortValue(originalURL string) (string, error) {
 	return "", errors.New("not found key in database")
 }
 
-// SetValue сохраняет пару короткий URL - оригинальный URL
-func (r *MemoryRepository) SetValue(shortURL, originalURL string) error {
+// SetValue сохраняет пару короткий URL - оригинальный URL с user_id
+func (r *MemoryRepository) SetValue(shortURL, originalURL, userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.data[shortURL]; ok {
 		return ErrRowExists
 	}
 	r.data[shortURL] = originalURL
+	r.userMap[shortURL] = userID
 	return nil
 }
 
-// SetValuesBatch сохраняет пакет пар короткий URL - оригинальный URL
-func (r *MemoryRepository) SetValuesBatch(pairs map[string]string) error {
+// SetValuesBatch сохраняет пакет пар короткий URL - оригинальный URL с user_id
+func (r *MemoryRepository) SetValuesBatch(pairs map[string]string, userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -63,6 +66,7 @@ func (r *MemoryRepository) SetValuesBatch(pairs map[string]string) error {
 			return ErrRowExists
 		}
 		r.data[key] = value
+		r.userMap[key] = userID
 	}
 	return nil
 }
@@ -70,4 +74,21 @@ func (r *MemoryRepository) SetValuesBatch(pairs map[string]string) error {
 // Close закрывает соединение с хранилищем (для памяти это заглушка)
 func (r *MemoryRepository) Close() error {
 	return nil
+}
+
+// GetUserURLs получает все URL пользователя
+func (r *MemoryRepository) GetUserURLs(userID string) ([]map[string]string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var urls []map[string]string
+	for shortURL, originalURL := range r.data {
+		if userID == r.userMap[shortURL] {
+			urls = append(urls, map[string]string{
+				"short_url":    shortURL,
+				"original_url": originalURL,
+			})
+		}
+	}
+	return urls, nil
 }

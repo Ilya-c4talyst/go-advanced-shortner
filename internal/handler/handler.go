@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/auth"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/middleware"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/model"
@@ -19,6 +20,7 @@ import (
 type Handler struct {
 	Service       *service.URLShortnerService
 	Configuration *config.ConfigStruct
+	AuthService   *auth.AuthService
 }
 
 // Конструктор для хендлера
@@ -27,14 +29,19 @@ func NewHandler(
 	service *service.URLShortnerService,
 	configuration *config.ConfigStruct,
 ) {
+	// Создаем сервис аутентификации
+	authService := auth.NewAuthService(configuration.AuthSecretKey)
+	
 	handler := &Handler{
 		Service:       service,
 		Configuration: configuration,
+		AuthService:   authService,
 	}
 
 	// Добавляем middleware перед регистрацией маршрутов
 	ginEngine.Use(middleware.GzipMiddleware())
 	ginEngine.Use(middleware.LoggingMiddleware())
+	ginEngine.Use(middleware.AuthMiddleware(authService))
 
 	// Регистрируем маршруты
 	ginEngine.POST("/api/shorten", handler.SendJSONURL)
@@ -42,6 +49,13 @@ func NewHandler(
 	ginEngine.POST("/", handler.SendURL)
 	ginEngine.GET("/:id", handler.GetURL)
 	ginEngine.GET("/ping", handler.Ping)
+	
+	// Защищенный маршрут для получения URL пользователя
+	userGroup := ginEngine.Group("/api/user")
+	userGroup.Use(middleware.RequireAuthMiddleware(authService))
+	{
+		userGroup.GET("/urls", handler.GetUserURLs)
+	}
 }
 
 // handleServiceError обрабатывает ошибки сервиса и отправляет соответствующий текстовый ответ
@@ -95,8 +109,12 @@ func (h *Handler) SendURL(c *gin.Context) {
 		return
 	}
 
+	// Получаем userID из контекста
+	userID, _ := c.Get(middleware.UserIDKey)
+	userIDStr := userID.(string)
+
 	// Создание короткой ссылки
-	shortURL, err := h.Service.CreateShortURL(string(body))
+	shortURL, err := h.Service.CreateShortURL(string(body), userIDStr)
 	if err != nil {
 		h.handleServiceError(c, err, shortURL)
 		return
@@ -138,8 +156,12 @@ func (h *Handler) SendJSONURL(c *gin.Context) {
 		return
 	}
 
+	// Получаем userID из контекста
+	userID, _ := c.Get(middleware.UserIDKey)
+	userIDStr := userID.(string)
+
 	// Создание короткой ссылки
-	shortURL, err := h.Service.CreateShortURL(request.URL)
+	shortURL, err := h.Service.CreateShortURL(request.URL, userIDStr)
 	if err != nil {
 		h.handleServiceErrorJSON(c, err, shortURL)
 		return
@@ -194,8 +216,12 @@ func (h *Handler) SendJSONURLBatch(c *gin.Context) {
 		correlationMap[request.OriginalURL] = request.CorrelationID
 	}
 
+	// Получаем userID из контекста
+	userID, _ := c.Get(middleware.UserIDKey)
+	userIDStr := userID.(string)
+
 	// Создание коротких ссылок пакетом
-	shortURLsMap, err := h.Service.CreateShortURLsBatch(urls)
+	shortURLsMap, err := h.Service.CreateShortURLsBatch(urls, userIDStr)
 	if err != nil {
 		h.handleGenericErrorJSON(c, http.StatusInternalServerError, "Error creating short URL")
 		return
@@ -240,4 +266,45 @@ func (h *Handler) Ping(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "OK"})
+}
+
+// GetUserURLs возвращает все URL пользователя
+func (h *Handler) GetUserURLs(c *gin.Context) {
+	// Получаем userID из контекста
+	userID, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		h.handleGenericErrorJSON(c, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	userIDStr := userID.(string)
+	if userIDStr == "" {
+		h.handleGenericErrorJSON(c, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Получаем URL пользователя
+	userURLs, err := h.Service.GetUserURLs(userIDStr)
+	if err != nil {
+		h.handleGenericErrorJSON(c, http.StatusInternalServerError, "Error retrieving user URLs")
+		return
+	}
+
+	// Если у пользователя нет URL
+	if len(userURLs) == 0 {
+		c.Status(http.StatusNoContent)
+		return
+	}
+
+	// Формируем ответ с полными URL
+	response := make([]model.UserURL, len(userURLs))
+	for i, urlData := range userURLs {
+		response[i] = model.UserURL{
+			ShortURL:    h.Configuration.ShortAddress + "/" + urlData["short_url"],
+			OriginalURL: urlData["original_url"],
+		}
+	}
+
+	c.Header("Content-Type", "application/json")
+	c.JSON(http.StatusOK, response)
 }
