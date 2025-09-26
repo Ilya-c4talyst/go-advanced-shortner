@@ -101,39 +101,33 @@ func (r *PostgreSQLRepository) GetShortValue(originalURL string) (string, error)
 
 // SetValue сохраняет пару короткий URL - оригинальный URL с user_id
 func (r *PostgreSQLRepository) SetValue(shortURL, originalURL, userID string) error {
-    tx, err := r.pool.Begin(context.Background())
-    if err != nil {
-        return fmt.Errorf("failed to begin transaction: %w", err)
-    }
-    defer tx.Rollback(context.Background())
+	tx, err := r.pool.Begin(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %v", err)
+	}
+	defer tx.Rollback(context.Background())
 
-    // 1. Проверяем, существует ли уже запись с таким originalURL
-    var existingShortURL string
-    err = tx.QueryRow(context.Background(),
-        "SELECT short_url FROM urls WHERE original_url = $1",
-        originalURL).Scan(&existingShortURL)
+	var result string
+	err = tx.QueryRow(context.Background(),
+		`INSERT INTO urls (short_url, original_url, user_id)
+		 VALUES ($1, $2, $3)
+		 ON CONFLICT (original_url) DO NOTHING
+		 RETURNING short_url`,
+		shortURL, originalURL, userID).Scan(&result)
 
-    if err == nil {
-        // Запись уже существует
-        return ErrRowExists
-    }
-    if errors.Is(err, sql.ErrNoRows) {
-        return fmt.Errorf("failed to check existing URL: %w", err)
-    }
+	// Запись уже существует
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrRowExists
+	}
+	if err != nil {
+		return fmt.Errorf("failed to insert url: %v", err)
+	}
 
-    // 2. Вставляем новую запись
-    _, err = tx.Exec(context.Background(),
-        "INSERT INTO urls (short_url, original_url, user_id) VALUES ($1, $2, $3)",
-        shortURL, originalURL, userID)
-    if err != nil {
-        return fmt.Errorf("failed to insert url: %w", err)
-    }
+	if err = tx.Commit(context.Background()); err != nil {
+		return fmt.Errorf("failed to commit transaction: %v", err)
+	}
 
-    if err = tx.Commit(context.Background()); err != nil {
-        return fmt.Errorf("failed to commit transaction: %w", err)
-    }
-
-    return nil
+	return nil
 }
 
 // SetValuesBatch сохраняет пакет пар короткий URL - оригинальный URL с user_id
