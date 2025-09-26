@@ -65,6 +65,11 @@ func (p *FileJSONPersistence) Load(filePath string) (map[string]string, map[stri
 
 // Сохраняет записи в файл
 func (p *FileJSONPersistence) saveRecordsToFile(filePath string, records []model.URLRecord) error {
+	// Если records nil, инициализируем пустым slice
+	if records == nil {
+		records = []model.URLRecord{}
+	}
+	
 	data, err := json.MarshalIndent(records, "", "  ")
 	if err != nil {
 		return err

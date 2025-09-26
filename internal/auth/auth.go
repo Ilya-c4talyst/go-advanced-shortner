@@ -2,12 +2,13 @@ package auth
 
 import (
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // AuthService предоставляет функциональность для аутентификации пользователей
@@ -24,20 +25,7 @@ func NewAuthService(secretKey string) *AuthService {
 
 // GenerateUserID создает новый уникальный идентификатор пользователя
 func (a *AuthService) GenerateUserID() string {
-	// Генерируем 16 случайных байт
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		// fallback на время и подпись в случае ошибки
-		timestamp := fmt.Sprintf("%d", time.Now().UnixNano())
-		return hex.EncodeToString([]byte(a.SignValue(timestamp)))[:32]
-	}
-	
-	// Форматируем как UUID v4
-	b[6] = (b[6] & 0x0f) | 0x40 // Version 4
-	b[8] = (b[8] & 0x3f) | 0x80 // Variant 10
-	
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+	return uuid.New().String()
 }
 
 // SignValue создает подпись для значения
@@ -57,9 +45,9 @@ func (a *AuthService) CreateSignedCookie(userID string) *http.Cookie {
 		Value:    cookieValue,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false, // для локальной разработки
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int(30 * 24 * time.Hour.Seconds()), // 30 дней
+		MaxAge:   int(30 * 24 * time.Hour.Seconds()),
 	}
 }
 
