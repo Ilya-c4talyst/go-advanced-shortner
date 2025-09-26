@@ -141,10 +141,11 @@ func TestDB_GetUserURLs(t *testing.T) {
 		
 		for _, urlMap := range urls {
 			shortURL := urlMap["short_url"]
-			if shortURL == "short1" {
+			switch shortURL {
+			case "short1":
 				foundShort1 = true
 				assert.Equal(t, "https://example.com/1", urlMap["original_url"])
-			} else if shortURL == "short3" {
+			case "short3":
 				foundShort3 = true
 				assert.Equal(t, "https://example.com/3", urlMap["original_url"])
 			}
