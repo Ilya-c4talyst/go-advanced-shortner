@@ -24,8 +24,8 @@ func NewURLShortnerService(repo repository.URLRepository, configuration *config.
 	}
 }
 
-// Создание сокращенного URL
-func (u *URLShortnerService) CreateShortURL(url string) (string, error) {
+// Создание сокращенного URL для пользователя
+func (u *URLShortnerService) CreateShortURL(url, userID string) (string, error) {
 	// Инициализация результата
 	var shortURL string
 
@@ -39,7 +39,7 @@ func (u *URLShortnerService) CreateShortURL(url string) (string, error) {
 	}
 
 	// Сохраняем в репозитории
-	if err := u.Repository.SetValue(shortURL, url); err != nil {
+	if err := u.Repository.SetValue(shortURL, url, userID); err != nil {
 		if errors.Is(err, repository.ErrRowExists) {
 			// Если ссылка уже существует
 			if shortURL, err = u.Repository.GetShortValue(url); err == nil {
@@ -52,8 +52,8 @@ func (u *URLShortnerService) CreateShortURL(url string) (string, error) {
 	return shortURL, nil
 }
 
-// CreateShortURLsBatch создает сокращенные URL для пакета URL
-func (u *URLShortnerService) CreateShortURLsBatch(urls []string) (map[string]string, error) {
+// CreateShortURLsBatch создает сокращенные URL для пакета URL для пользователя
+func (u *URLShortnerService) CreateShortURLsBatch(urls []string, userID string) (map[string]string, error) {
 	if len(urls) == 0 {
 		return make(map[string]string), nil
 	}
@@ -83,7 +83,7 @@ func (u *URLShortnerService) CreateShortURLsBatch(urls []string) (map[string]str
 	}
 
 	// Сохраняем пакет в репозитории
-	if err := u.Repository.SetValuesBatch(pairs); err != nil {
+	if err := u.Repository.SetValuesBatch(pairs, userID); err != nil {
 		return nil, err
 	}
 
@@ -98,6 +98,11 @@ func (u *URLShortnerService) GetFullURL(shortURL string) (string, error) {
 	} else {
 		return "", errors.New("not found")
 	}
+}
+
+// GetUserURLs получает все URL пользователя
+func (u *URLShortnerService) GetUserURLs(userID string) ([]map[string]string, error) {
+	return u.Repository.GetUserURLs(userID)
 }
 
 // Ping DB
