@@ -35,11 +35,6 @@ func (u *URL) GetID() int {
 	return u.ID
 }
 
-// GetUserID возвращает идентификатор пользователя
-func (u *URL) GetUserID() string {
-	return u.UserID
-}
-
 // IsURLDeleted возвращает статус удаления URL
 func (u *URL) IsURLDeleted() bool {
 	return u.IsDeleted

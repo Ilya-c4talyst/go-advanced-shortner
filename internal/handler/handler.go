@@ -2,7 +2,8 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"	
+	"errors"
+	"log"
 	"net/http"
 	"strings"
 
@@ -346,9 +347,11 @@ func (h *Handler) DeleteUserURLs(c *gin.Context) {
 		return
 	}
 
-	// Запускаем асинхронное удаление URL
+	// Запускаем асинхронное удаление URL с обработкой ошибок
 	go func() {
-		h.Service.DeleteURLsBatch(deleteRequest, userIDStr)
+		if err := h.Service.DeleteURLsBatch(deleteRequest, userIDStr); err != nil {
+			log.Printf("Error deleting URLs batch for user %s: %v", userIDStr, err)
+		}
 	}()
 
 	// Возвращаем статус 202 Accepted

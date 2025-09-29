@@ -71,7 +71,7 @@ func TestURL_GetUserID(t *testing.T) {
 		userID := "user-456"
 		url := NewURL(1, "abc123", "https://example.com", userID)
 
-		result := url.GetUserID()
+		result := url.UserID
 
 		assert.Equal(t, userID, result)
 	})
@@ -89,6 +89,6 @@ func TestURL_AllMethods(t *testing.T) {
 		assert.Equal(t, id, url.GetID())
 		assert.Equal(t, shortURL, url.GetShortURL())
 		assert.Equal(t, originalURL, url.GetOriginalURL())
-		assert.Equal(t, userID, url.GetUserID())
+		assert.Equal(t, userID, url.UserID)
 	})
 }
