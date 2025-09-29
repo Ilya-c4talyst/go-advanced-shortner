@@ -6,6 +6,7 @@ type URL struct {
 	ShortURL    string
 	OriginalURL string
 	UserID      string
+	IsDeleted   bool
 }
 
 // NewURL создаёт новую доменную сущность URL
@@ -15,6 +16,7 @@ func NewURL(id int, shortURL, originalURL, userID string) *URL {
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 		UserID:      userID,
+		IsDeleted:   false,
 	}
 }
 
@@ -33,7 +35,12 @@ func (u *URL) GetID() int {
 	return u.ID
 }
 
-// GetUserID возвращает идентификатор пользователя
-func (u *URL) GetUserID() string {
-	return u.UserID
+// IsURLDeleted возвращает статус удаления URL
+func (u *URL) IsURLDeleted() bool {
+	return u.IsDeleted
+}
+
+// MarkAsDeleted помечает URL как удаленный
+func (u *URL) MarkAsDeleted() {
+	u.IsDeleted = true
 }
