@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/audit"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/auth"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/config"
 	"github.com/Ilya-c4talyst/go-advanced-shortner/internal/middleware"
@@ -22,6 +23,7 @@ type Handler struct {
 	Service       *service.URLShortnerService
 	Configuration *config.ConfigStruct
 	AuthService   *auth.AuthService
+	AuditService  *audit.AuditService
 }
 
 // Конструктор для хендлера
@@ -33,10 +35,27 @@ func NewHandler(
 	// Создаем сервис аутентификации
 	authService := auth.NewAuthService(configuration.AuthSecretKey)
 
+	// Создаем сервис аудита
+	auditService := audit.NewAuditService()
+
+	// Подключаем наблюдателей аудита
+	if configuration.AuditFile != "" {
+		fileObserver := audit.NewFileObserver(configuration.AuditFile)
+		auditService.Attach(fileObserver)
+		log.Printf("Audit file observer enabled: %s", configuration.AuditFile)
+	}
+
+	if configuration.AuditURL != "" {
+		remoteObserver := audit.NewRemoteObserver(configuration.AuditURL)
+		auditService.Attach(remoteObserver)
+		log.Printf("Audit remote observer enabled: %s", configuration.AuditURL)
+	}
+
 	handler := &Handler{
 		Service:       service,
 		Configuration: configuration,
 		AuthService:   authService,
+		AuditService:  auditService,
 	}
 
 	// Добавляем middleware перед регистрацией маршрутов
@@ -117,6 +136,9 @@ func (h *Handler) SendURL(c *gin.Context) {
 		return
 	}
 
+	// Логируем событие аудита
+	h.AuditService.LogEvent(audit.ActionShorten, userIDStr, string(body))
+
 	// Response: текст с полным URL
 	c.Header("Content-Type", "text/plain")
 	c.String(http.StatusCreated, h.Configuration.ShortAddress+"/"+shortURL)
@@ -163,6 +185,9 @@ func (h *Handler) SendJSONURL(c *gin.Context) {
 		h.handleServiceErrorJSON(c, err, shortURL)
 		return
 	}
+
+	// Логируем событие аудита
+	h.AuditService.LogEvent(audit.ActionShorten, userIDStr, request.URL)
 
 	// Response: JSON с полным URL
 	var response model.Response
@@ -257,6 +282,16 @@ func (h *Handler) GetURL(c *gin.Context) {
 		h.handleGenericErrorText(c, http.StatusBadRequest, "URL not found")
 		return
 	}
+
+	// Получаем userID из контекста (может быть пустым для анонимных пользователей)
+	userID, exists := c.Get(middleware.UserIDKey)
+	userIDStr := ""
+	if exists {
+		userIDStr = userID.(string)
+	}
+
+	// Логируем событие аудита
+	h.AuditService.LogEvent(audit.ActionFollow, userIDStr, fullURL)
 
 	// Редирект (307)
 	c.Redirect(http.StatusTemporaryRedirect, fullURL)

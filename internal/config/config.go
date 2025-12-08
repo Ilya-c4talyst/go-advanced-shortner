@@ -8,12 +8,14 @@ type ConfigStruct struct {
 	FilePath      string
 	AddressDB     string
 	AuthSecretKey string
+	AuditFile     string // путь к файлу для аудита
+	AuditURL      string // URL для удаленного сервера аудита
 }
 
 // Генерация конфигурации
 func GenerateConfig() *ConfigStruct {
 	// Получение данных из флагов
-	reqAddr, resAddr, filePath, dbAddress := parseFlags()
+	reqAddr, resAddr, filePath, dbAddress, auditFile, auditURL := parseFlags()
 
 	return &ConfigStruct{
 		Protocol:      "http://",
@@ -22,5 +24,7 @@ func GenerateConfig() *ConfigStruct {
 		FilePath:      filePath,
 		AddressDB:     dbAddress,
 		AuthSecretKey: "your-secret-key-change-in-production", // В продакшене должен быть из переменной окружения
+		AuditFile:     auditFile,
+		AuditURL:      auditURL,
 	}
 }
