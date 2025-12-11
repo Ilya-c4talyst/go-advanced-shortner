@@ -25,7 +25,7 @@ func NewFileJSONPersistence() *FileJSONPersistence {
 // Сохраняет данные в JSON файл
 func (p *FileJSONPersistence) Save(filePath string, data map[string]string, userMap map[string]string) error {
 	var records []model.URLRecord
-	
+
 	counter := 1
 	for shortURL, originalURL := range data {
 		userID := userMap[shortURL]
@@ -38,7 +38,7 @@ func (p *FileJSONPersistence) Save(filePath string, data map[string]string, user
 		records = append(records, record)
 		counter++
 	}
-	
+
 	return p.saveRecordsToFile(filePath, records)
 }
 
@@ -48,7 +48,7 @@ func (p *FileJSONPersistence) Load(filePath string) (map[string]string, map[stri
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	
+
 	data := make(map[string]string)
 	userMap := make(map[string]string)
 	maxID := 0
@@ -59,7 +59,7 @@ func (p *FileJSONPersistence) Load(filePath string) (map[string]string, map[stri
 			maxID = record.ID
 		}
 	}
-	
+
 	return data, userMap, maxID, nil
 }
 
@@ -69,18 +69,18 @@ func (p *FileJSONPersistence) saveRecordsToFile(filePath string, records []model
 	if records == nil {
 		records = []model.URLRecord{}
 	}
-	
+
 	data, err := json.MarshalIndent(records, "", "  ")
 	if err != nil {
 		return err
 	}
-	
+
 	// Создаем директорию если её нет
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	
+
 	return os.WriteFile(filePath, data, 0644)
 }
 
@@ -89,21 +89,21 @@ func (p *FileJSONPersistence) loadRecordsFromFile(filePath string) ([]model.URLR
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return []model.URLRecord{}, nil // Если файл не существует, возвращаем пустой массив
 	}
-	
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Пустой файл
 	if len(data) == 0 {
 		return []model.URLRecord{}, nil
 	}
-	
+
 	var records []model.URLRecord
 	if err := json.Unmarshal(data, &records); err != nil {
 		return nil, err
 	}
-	
+
 	return records, nil
 }

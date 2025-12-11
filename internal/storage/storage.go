@@ -51,11 +51,11 @@ func (db *DB) LoadFromFile(filePath string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	db.data = data
 	db.userMap = userMap
 	db.counter = maxCounter
-	
+
 	return nil
 }
 

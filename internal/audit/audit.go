@@ -60,7 +60,7 @@ func (s *AuditService) Attach(observer Observer) {
 func (s *AuditService) Detach(observer Observer) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	for i, obs := range s.observers {
 		if obs == observer {
 			s.observers = append(s.observers[:i], s.observers[i+1:]...)
@@ -73,7 +73,7 @@ func (s *AuditService) Detach(observer Observer) {
 func (s *AuditService) NotifyAll(event AuditEvent) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	for _, observer := range s.observers {
 		// Запускаем уведомления асинхронно, чтобы не блокировать основной поток
 		go observer.Notify(event)
@@ -108,7 +108,7 @@ func NewFileObserver(filePath string) *FileObserver {
 func (f *FileObserver) Notify(event AuditEvent) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	
+
 	// Открываем файл для добавления
 	file, err := os.OpenFile(f.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -116,17 +116,17 @@ func (f *FileObserver) Notify(event AuditEvent) {
 		return
 	}
 	defer file.Close()
-	
+
 	// Сериализуем событие в JSON
 	data, err := json.Marshal(event)
 	if err != nil {
 		log.Printf("Error marshaling audit event: %v", err)
 		return
 	}
-	
+
 	// Добавляем новую строку
 	data = append(data, '\n')
-	
+
 	// Записываем в файл
 	if _, err := file.Write(data); err != nil {
 		log.Printf("Error writing to audit file: %v", err)
@@ -157,7 +157,7 @@ func (r *RemoteObserver) Notify(event AuditEvent) {
 		log.Printf("Error marshaling audit event for remote: %v", err)
 		return
 	}
-	
+
 	// Отправляем POST запрос
 	resp, err := r.client.Post(r.url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
@@ -165,7 +165,7 @@ func (r *RemoteObserver) Notify(event AuditEvent) {
 		return
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		log.Printf("Remote audit server returned non-OK status: %d", resp.StatusCode)
 	}

@@ -11,7 +11,7 @@ import (
 func parseFlags() (string, string, string, string, string, string) {
 	// Создаем новый FlagSet для избежания конфликтов в тестах
 	fs := flag.NewFlagSet("config", flag.ContinueOnError)
-	
+
 	// адрес запуска HTTP-сервера значением localhost:8080 по умолчанию
 	portFlag := fs.String("a", "localhost:8080", "address and port to run server")
 

@@ -58,7 +58,7 @@ func TestMemoryRepository(t *testing.T) {
 
 	t.Run("Get user URLs", func(t *testing.T) {
 		userID := "user789"
-		
+
 		// Создаем несколько URL для пользователя
 		_ = repo.SetValue("key1", "https://example1.com", userID)
 		_ = repo.SetValue("key2", "https://example2.com", userID)

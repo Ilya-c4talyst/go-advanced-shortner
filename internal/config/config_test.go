@@ -42,16 +42,16 @@ func TestGenerateConfig(t *testing.T) {
 		// Очищаем переменные окружения для чистого теста
 		os.Unsetenv("SERVER_ADDRESS")
 		os.Unsetenv("BASE_URL")
-		os.Unsetenv("FILE_STORAGE_PATH") 
+		os.Unsetenv("FILE_STORAGE_PATH")
 		os.Unsetenv("DATABASE_DSN")
 
 		config := GenerateConfig()
 
 		assert.NotNil(t, config)
 		assert.Equal(t, "http://", config.Protocol)
-		assert.Contains(t, config.Port, ":") // Порт должен содержать двоеточие
+		assert.Contains(t, config.Port, ":")               // Порт должен содержать двоеточие
 		assert.Contains(t, config.ShortAddress, "http://") // Адрес должен содержать протокол
-		assert.NotEmpty(t, config.FilePath) // Путь к файлу не должен быть пустым
+		assert.NotEmpty(t, config.FilePath)                // Путь к файлу не должен быть пустым
 		assert.Equal(t, "your-secret-key-change-in-production", config.AuthSecretKey)
 	})
 

@@ -105,15 +105,15 @@ type AuthServiceInterface interface {
 func AuthMiddleware(authService AuthServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, cookie := authService.GetOrCreateUserID(c.Request)
-		
+
 		// Сохраняем userID в контексте для использования в хендлерах
 		c.Set(UserIDKey, userID)
-		
+
 		// Если была создана новая кука, устанавливаем её
 		if cookie != nil {
 			http.SetCookie(c.Writer, cookie)
 		}
-		
+
 		c.Next()
 	}
 }
@@ -129,7 +129,7 @@ func RequireAuthMiddleware(authService AuthServiceInterface) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		// Проверяем валидность куки
 		userID, valid := authService.ValidateCookie(cookie.Value)
 		if !valid || userID == "" {
@@ -138,10 +138,10 @@ func RequireAuthMiddleware(authService AuthServiceInterface) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		// Сохраняем userID в контексте для использования в хендлерах
 		c.Set(UserIDKey, userID)
-		
+
 		c.Next()
 	}
 }

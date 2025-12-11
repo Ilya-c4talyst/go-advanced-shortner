@@ -42,7 +42,7 @@ func (r *MemoryRepository) checkURLExists(shortURL string) (string, error) {
 func (r *MemoryRepository) GetFullValue(shortURL string) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	return r.checkURLExists(shortURL)
 }
 
@@ -50,7 +50,7 @@ func (r *MemoryRepository) GetFullValue(shortURL string) (string, error) {
 func (r *MemoryRepository) GetShortValue(originalURL string) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	for short, long := range r.data {
 		if long == originalURL {
 			return short, nil
@@ -63,7 +63,7 @@ func (r *MemoryRepository) GetShortValue(originalURL string) (string, error) {
 func (r *MemoryRepository) SetValue(shortURL, originalURL, userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	if _, ok := r.data[shortURL]; ok {
 		return ErrRowExists
 	}
@@ -76,7 +76,7 @@ func (r *MemoryRepository) SetValue(shortURL, originalURL, userID string) error 
 func (r *MemoryRepository) SetValuesBatch(pairs map[string]string, userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	for key, value := range pairs {
 		if _, ok := r.data[key]; ok {
 			return ErrRowExists
@@ -96,10 +96,10 @@ func (r *MemoryRepository) Close() error {
 func (r *MemoryRepository) GetUserURLs(userID string) ([]map[string]string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	// Предварительная оценка размера для уменьшения аллокаций
 	urls := make([]map[string]string, 0, 10)
-	
+
 	for shortURL, originalURL := range r.data {
 		// Проверяем, что URL принадлежит пользователю и не удален
 		if userID == r.userMap[shortURL] {
@@ -111,7 +111,7 @@ func (r *MemoryRepository) GetUserURLs(userID string) ([]map[string]string, erro
 			}
 		}
 	}
-	
+
 	return urls, nil
 }
 
@@ -119,7 +119,7 @@ func (r *MemoryRepository) GetUserURLs(userID string) ([]map[string]string, erro
 func (r *MemoryRepository) DeleteURLsBatch(shortURLs []string, userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	for _, shortURL := range shortURLs {
 		// Проверяем, принадлежит ли URL пользователю
 		if ownerID, exists := r.userMap[shortURL]; exists && ownerID == userID {
@@ -133,7 +133,7 @@ func (r *MemoryRepository) DeleteURLsBatch(shortURLs []string, userID string) er
 func (r *MemoryRepository) IsDeleted(shortURL string) (bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	// Проверяем, существует ли URL вообще
 	if _, exists := r.data[shortURL]; !exists {
 		return false, errors.New("not found key in database")
