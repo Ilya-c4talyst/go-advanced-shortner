@@ -1,16 +1,19 @@
 package model
 
-// Model Request
+// Request представляет запрос на создание короткого URL.
+// Используется в эндпоинте POST /api/shorten.
 type Request struct {
 	URL string `json:"url" validate:"required,url"`
 }
 
-// Model Response
+// Response представляет ответ с коротким URL.
+// Используется в эндпоинте POST /api/shorten.
 type Response struct {
 	Result string `json:"result"`
 }
 
-// Model for URL storage in JSON format
+// URLRecord представляет запись URL в JSON-хранилище.
+// Используется для сериализации данных в файловом хранилище.
 type URLRecord struct {
 	ID          int    `json:"id"`
 	ShortURL    string `json:"short_url"`
@@ -18,23 +21,28 @@ type URLRecord struct {
 	UserID      string `json:"user_id"`
 }
 
-// Model for batch request
+// BatchRequest представляет один элемент пакетного запроса на создание коротких URL.
+// Используется в эндпоинте POST /api/shorten/batch.
 type BatchRequest struct {
 	CorrelationID string `json:"correlation_id" validate:"required"`
 	OriginalURL   string `json:"original_url" validate:"required,url"`
 }
 
-// Model for batch response
+// BatchResponse представляет один элемент ответа на пакетный запрос.
+// Используется в эндпоинте POST /api/shorten/batch.
 type BatchResponse struct {
 	CorrelationID string `json:"correlation_id"`
 	ShortURL      string `json:"short_url"`
 }
 
-// UserURL представляет URL пользователя в ответе
+// UserURL представляет URL пользователя в ответе GET /api/user/urls.
+// Содержит как короткий, так и оригинальный URL.
 type UserURL struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
 
-// DeleteURLsRequest представляет запрос на удаление URL
+// DeleteURLsRequest представляет запрос на удаление URL пользователя.
+// Используется в эндпоинте DELETE /api/user/urls.
+// Представляет собой массив коротких URL для удаления.
 type DeleteURLsRequest []string

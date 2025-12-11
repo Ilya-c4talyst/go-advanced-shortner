@@ -216,7 +216,7 @@ func (r *PostgreSQLRepository) DeleteURLsBatch(shortURLs []string, userID string
 	placeholders := make([]string, len(shortURLs))
 	args := make([]interface{}, len(shortURLs)+1)
 	args[0] = userID
-	
+
 	for i, shortURL := range shortURLs {
 		placeholders[i] = fmt.Sprintf("$%d", i+2)
 		args[i+1] = shortURL

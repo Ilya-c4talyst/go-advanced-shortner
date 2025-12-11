@@ -8,10 +8,10 @@ import (
 )
 
 // parseFlags обрабатывает аргументы командной строки
-func parseFlags() (string, string, string, string) {
+func parseFlags() (string, string, string, string, string, string) {
 	// Создаем новый FlagSet для избежания конфликтов в тестах
 	fs := flag.NewFlagSet("config", flag.ContinueOnError)
-	
+
 	// адрес запуска HTTP-сервера значением localhost:8080 по умолчанию
 	portFlag := fs.String("a", "localhost:8080", "address and port to run server")
 
@@ -23,6 +23,12 @@ func parseFlags() (string, string, string, string) {
 
 	// адрес для базы данных
 	addressFlagDB := fs.String("d", "", "database address")
+
+	// путь к файлу для аудита
+	auditFileFlag := fs.String("audit-file", "", "path to the audit file")
+
+	// URL удаленного сервера для аудита
+	auditURLFlag := fs.String("audit-url", "", "URL of remote audit server")
 
 	// В тестах os.Args может быть пустым или содержать аргументы теста
 	if len(os.Args) > 1 {
@@ -53,6 +59,10 @@ func parseFlags() (string, string, string, string) {
 	// Адрес для базы данных
 	addressDB := *addressFlagDB
 
+	// Пути для аудита
+	auditFile := *auditFileFlag
+	auditURL := *auditURLFlag
+
 	// Приоритет параметров согласно заданию:
 	// 1. Переменная окружения (наивысший приоритет)
 	// 2. Флаг командной строки
@@ -81,5 +91,13 @@ func parseFlags() (string, string, string, string) {
 		addressDB = envAddressDB
 	}
 
-	return port, resAddress, filePath, addressDB
+	if envAuditFile := os.Getenv("AUDIT_FILE"); envAuditFile != "" {
+		auditFile = envAuditFile
+	}
+
+	if envAuditURL := os.Getenv("AUDIT_URL"); envAuditURL != "" {
+		auditURL = envAuditURL
+	}
+
+	return port, resAddress, filePath, addressDB, auditFile, auditURL
 }

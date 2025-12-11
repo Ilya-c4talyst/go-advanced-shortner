@@ -11,10 +11,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UserIDKey является ключом для хранения ID пользователя в контексте
+// UserIDKey является ключом для хранения ID пользователя в контексте Gin.
+// Используется для передачи идентификатора пользователя между middleware и хендлерами.
 const UserIDKey = "userID"
 
-// Middleware для логирования запросов
+// LoggingMiddleware создает middleware для логирования HTTP-запросов.
+// Middleware записывает информацию о каждом запросе: URI, метод, статус, длительность и IP клиента.
+//
+// Возвращает:
+//   - gin.HandlerFunc: функция middleware для логирования
+//
+// Пример использования:
+//
+//	router.Use(middleware.LoggingMiddleware())
 func LoggingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -34,7 +43,16 @@ func LoggingMiddleware() gin.HandlerFunc {
 	}
 }
 
-// GzipMiddleware middleware для обработки gzip сжатия
+// GzipMiddleware создает middleware для обработки gzip сжатия запросов и ответов.
+// Middleware автоматически распаковывает входящие gzip-сжатые данные
+// и сжимает исходящие ответы, если клиент поддерживает gzip.
+//
+// Возвращает:
+//   - gin.HandlerFunc: функция middleware для обработки gzip
+//
+// Пример использования:
+//
+//	router.Use(middleware.GzipMiddleware())
 func GzipMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Обрабатываем входящие сжатые данные
@@ -95,30 +113,59 @@ func GzipMiddleware() gin.HandlerFunc {
 	}
 }
 
-// AuthMiddleware middleware для аутентификации пользователей
-// Интерфейс для сервиса аутентификации
+// AuthServiceInterface определяет интерфейс для сервиса аутентификации.
+// Реализация должна предоставлять методы для работы с пользовательскими cookie
+// и аутентификацией пользователей.
 type AuthServiceInterface interface {
+	// GetOrCreateUserID извлекает ID пользователя из запроса или создает нового пользователя
 	GetOrCreateUserID(r *http.Request) (string, *http.Cookie)
+
+	// ValidateCookie проверяет подлинность cookie и возвращает ID пользователя
 	ValidateCookie(cookieValue string) (string, bool)
 }
 
+// AuthMiddleware создает middleware для аутентификации пользователей.
+// Middleware получает или создает ID пользователя из cookie и сохраняет его в контексте запроса.
+// Если пользователь не аутентифицирован, создается новый пользователь и устанавливается cookie.
+//
+// Параметры:
+//   - authService: сервис аутентификации, реализующий AuthServiceInterface
+//
+// Возвращает:
+//   - gin.HandlerFunc: функция middleware для обработки аутентификации
+//
+// Пример использования:
+//
+//	router.Use(middleware.AuthMiddleware(authService))
 func AuthMiddleware(authService AuthServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, cookie := authService.GetOrCreateUserID(c.Request)
-		
+
 		// Сохраняем userID в контексте для использования в хендлерах
 		c.Set(UserIDKey, userID)
-		
+
 		// Если была создана новая кука, устанавливаем её
 		if cookie != nil {
 			http.SetCookie(c.Writer, cookie)
 		}
-		
+
 		c.Next()
 	}
 }
 
-// RequireAuthMiddleware middleware, который требует валидную существующую куку
+// RequireAuthMiddleware создает middleware, который требует валидную существующую аутентификацию.
+// В отличие от AuthMiddleware, этот middleware не создает нового пользователя,
+// а возвращает ошибку 401 Unauthorized, если cookie отсутствует или невалидна.
+//
+// Параметры:
+//   - authService: сервис аутентификации, реализующий AuthServiceInterface
+//
+// Возвращает:
+//   - gin.HandlerFunc: функция middleware для строгой проверки аутентификации
+//
+// Пример использования:
+//
+//	router.GET("/api/user/urls", middleware.RequireAuthMiddleware(authService), handler.GetUserURLs)
 func RequireAuthMiddleware(authService AuthServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем наличие куки в запросе
@@ -129,7 +176,7 @@ func RequireAuthMiddleware(authService AuthServiceInterface) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		// Проверяем валидность куки
 		userID, valid := authService.ValidateCookie(cookie.Value)
 		if !valid || userID == "" {
@@ -138,10 +185,10 @@ func RequireAuthMiddleware(authService AuthServiceInterface) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		// Сохраняем userID в контексте для использования в хендлерах
 		c.Set(UserIDKey, userID)
-		
+
 		c.Next()
 	}
 }

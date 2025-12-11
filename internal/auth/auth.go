@@ -39,7 +39,7 @@ func (a *AuthService) SignValue(value string) string {
 func (a *AuthService) CreateSignedCookie(userID string) *http.Cookie {
 	signature := a.SignValue(userID)
 	cookieValue := fmt.Sprintf("%s:%s", userID, signature)
-	
+
 	return &http.Cookie{
 		Name:     "user_id",
 		Value:    cookieValue,
@@ -66,14 +66,14 @@ func (a *AuthService) ValidateCookie(cookieValue string) (string, bool) {
 			break
 		}
 	}
-	
+
 	if colonIndex == -1 {
 		return "", false
 	}
-	
+
 	parts = append(parts, cookieValue[:colonIndex])
 	parts = append(parts, cookieValue[colonIndex+1:])
-	
+
 	if len(parts) != 2 {
 		return "", false
 	}

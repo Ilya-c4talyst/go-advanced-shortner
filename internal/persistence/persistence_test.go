@@ -20,10 +20,10 @@ func TestNewFileJSONPersistence(t *testing.T) {
 func TestFileJSONPersistence_Save(t *testing.T) {
 	persistence := NewFileJSONPersistence()
 	tempDir := t.TempDir()
-	
+
 	t.Run("Save data to file", func(t *testing.T) {
 		filePath := filepath.Join(tempDir, "test_save.json")
-		
+
 		data := map[string]string{
 			"abc123": "https://example.com",
 			"xyz789": "https://google.com",
@@ -32,14 +32,14 @@ func TestFileJSONPersistence_Save(t *testing.T) {
 			"abc123": "user-1",
 			"xyz789": "user-2",
 		}
-		
+
 		err := persistence.Save(filePath, data, userMap)
 		assert.NoError(t, err)
-		
+
 		// Проверяем, что файл создался
 		_, err = os.Stat(filePath)
 		assert.NoError(t, err)
-		
+
 		// Проверяем содержимое файла
 		content, err := os.ReadFile(filePath)
 		assert.NoError(t, err)
@@ -47,30 +47,30 @@ func TestFileJSONPersistence_Save(t *testing.T) {
 		assert.Contains(t, string(content), "https://example.com")
 		assert.Contains(t, string(content), "user-1")
 	})
-	
+
 	t.Run("Save to non-existent directory", func(t *testing.T) {
 		filePath := filepath.Join(tempDir, "newdir", "test.json")
-		
+
 		data := map[string]string{"key": "value"}
 		userMap := map[string]string{"key": "user"}
-		
+
 		err := persistence.Save(filePath, data, userMap)
 		assert.NoError(t, err)
-		
+
 		// Проверяем, что директория и файл созданы
 		_, err = os.Stat(filePath)
 		assert.NoError(t, err)
 	})
-	
+
 	t.Run("Save empty data", func(t *testing.T) {
 		filePath := filepath.Join(tempDir, "empty.json")
-		
+
 		data := make(map[string]string)
 		userMap := make(map[string]string)
-		
+
 		err := persistence.Save(filePath, data, userMap)
 		assert.NoError(t, err)
-		
+
 		content, err := os.ReadFile(filePath)
 		assert.NoError(t, err)
 		assert.Equal(t, "[]", string(content))
@@ -80,10 +80,10 @@ func TestFileJSONPersistence_Save(t *testing.T) {
 func TestFileJSONPersistence_Load(t *testing.T) {
 	persistence := NewFileJSONPersistence()
 	tempDir := t.TempDir()
-	
+
 	t.Run("Load existing file", func(t *testing.T) {
 		filePath := filepath.Join(tempDir, "test_load.json")
-		
+
 		// Сначала сохраняем данные
 		originalData := map[string]string{
 			"abc123": "https://example.com",
@@ -93,10 +93,10 @@ func TestFileJSONPersistence_Load(t *testing.T) {
 			"abc123": "user-1",
 			"xyz789": "user-2",
 		}
-		
+
 		err := persistence.Save(filePath, originalData, originalUserMap)
 		assert.NoError(t, err)
-		
+
 		// Загружаем данные
 		data, userMap, maxID, err := persistence.Load(filePath)
 		assert.NoError(t, err)
@@ -104,24 +104,24 @@ func TestFileJSONPersistence_Load(t *testing.T) {
 		assert.Equal(t, originalUserMap, userMap)
 		assert.Equal(t, 2, maxID) // Два элемента, максимальный ID = 2
 	})
-	
+
 	t.Run("Load non-existent file", func(t *testing.T) {
 		filePath := filepath.Join(tempDir, "non_existent.json")
-		
+
 		data, userMap, maxID, err := persistence.Load(filePath)
 		assert.NoError(t, err)
 		assert.Empty(t, data)
 		assert.Empty(t, userMap)
 		assert.Equal(t, 0, maxID)
 	})
-	
+
 	t.Run("Load empty file", func(t *testing.T) {
 		filePath := filepath.Join(tempDir, "empty_file.json")
-		
+
 		// Создаем пустой файл
 		err := os.WriteFile(filePath, []byte(""), 0644)
 		assert.NoError(t, err)
-		
+
 		data, userMap, maxID, err := persistence.Load(filePath)
 		assert.NoError(t, err)
 		assert.Empty(t, data)
@@ -134,7 +134,7 @@ func TestFileJSONPersistence_SaveAndLoad_Integration(t *testing.T) {
 	persistence := NewFileJSONPersistence()
 	tempDir := t.TempDir()
 	filePath := filepath.Join(tempDir, "integration_test.json")
-	
+
 	t.Run("Save and load cycle", func(t *testing.T) {
 		// Подготовка данных
 		originalData := map[string]string{
@@ -147,15 +147,15 @@ func TestFileJSONPersistence_SaveAndLoad_Integration(t *testing.T) {
 			"short2": "user-b",
 			"short3": "user-a",
 		}
-		
+
 		// Сохранение
 		err := persistence.Save(filePath, originalData, originalUserMap)
 		assert.NoError(t, err)
-		
+
 		// Загрузка
 		loadedData, loadedUserMap, maxID, err := persistence.Load(filePath)
 		assert.NoError(t, err)
-		
+
 		// Проверка
 		assert.Equal(t, originalData, loadedData)
 		assert.Equal(t, originalUserMap, loadedUserMap)
@@ -166,10 +166,10 @@ func TestFileJSONPersistence_SaveAndLoad_Integration(t *testing.T) {
 func TestFileJSONPersistence_saveRecordsToFile(t *testing.T) {
 	persistence := NewFileJSONPersistence()
 	tempDir := t.TempDir()
-	
+
 	t.Run("Save records to file", func(t *testing.T) {
 		filePath := filepath.Join(tempDir, "records.json")
-		
+
 		records := []model.URLRecord{
 			{
 				ID:          1,
@@ -184,10 +184,10 @@ func TestFileJSONPersistence_saveRecordsToFile(t *testing.T) {
 				UserID:      "user-2",
 			},
 		}
-		
+
 		err := persistence.saveRecordsToFile(filePath, records)
 		assert.NoError(t, err)
-		
+
 		// Проверяем содержимое
 		content, err := os.ReadFile(filePath)
 		assert.NoError(t, err)
@@ -200,10 +200,10 @@ func TestFileJSONPersistence_saveRecordsToFile(t *testing.T) {
 func TestFileJSONPersistence_loadRecordsFromFile(t *testing.T) {
 	persistence := NewFileJSONPersistence()
 	tempDir := t.TempDir()
-	
+
 	t.Run("Load records from file", func(t *testing.T) {
 		filePath := filepath.Join(tempDir, "load_records.json")
-		
+
 		// Создаем тестовый файл
 		testData := `[
 			{
@@ -219,10 +219,10 @@ func TestFileJSONPersistence_loadRecordsFromFile(t *testing.T) {
 				"user_id": "user-2"
 			}
 		]`
-		
+
 		err := os.WriteFile(filePath, []byte(testData), 0644)
 		assert.NoError(t, err)
-		
+
 		records, err := persistence.loadRecordsFromFile(filePath)
 		assert.NoError(t, err)
 		assert.Len(t, records, 2)
@@ -230,10 +230,10 @@ func TestFileJSONPersistence_loadRecordsFromFile(t *testing.T) {
 		assert.Equal(t, "https://example.com", records[0].OriginalURL)
 		assert.Equal(t, "user-1", records[0].UserID)
 	})
-	
+
 	t.Run("Load from non-existent file", func(t *testing.T) {
 		filePath := filepath.Join(tempDir, "non_existent_records.json")
-		
+
 		records, err := persistence.loadRecordsFromFile(filePath)
 		assert.NoError(t, err)
 		assert.Empty(t, records)

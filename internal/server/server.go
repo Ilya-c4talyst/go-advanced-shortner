@@ -73,7 +73,7 @@ func (s *Server) closeRepository() error {
 		log.Printf("Ошибка при закрытии репозитория: %v", err)
 		return err
 	}
-	
+
 	log.Println("Соединение с репозиторием успешно закрыто")
 	return nil
 }
