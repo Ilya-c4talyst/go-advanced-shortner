@@ -18,7 +18,9 @@ import (
 	"github.com/go-playground/validator"
 )
 
-// Handler — структура хендлера
+// Handler представляет обработчик HTTP-запросов для сервиса сокращения URL.
+// Структура содержит все необходимые зависимости для обработки запросов:
+// сервис бизнес-логики, конфигурацию, сервисы аутентификации и аудита.
 type Handler struct {
 	Service       *service.URLShortnerService
 	Configuration *config.ConfigStruct
@@ -26,7 +28,23 @@ type Handler struct {
 	AuditService  *audit.AuditService
 }
 
-// Конструктор для хендлера
+// NewHandler создает новый экземпляр Handler и регистрирует все маршруты приложения.
+// Функция настраивает middleware (сжатие, логирование, аутентификация) и регистрирует
+// все эндпоинты API для работы с сокращенными URL.
+//
+// Параметры:
+//   - ginEngine: экземпляр Gin engine для регистрации маршрутов
+//   - service: сервис бизнес-логики для работы с URL
+//   - configuration: конфигурация приложения
+//
+// Регистрируемые маршруты:
+//   - POST /api/shorten - создание короткого URL (JSON)
+//   - POST /api/shorten/batch - пакетное создание коротких URL
+//   - POST / - создание короткого URL (text/plain)
+//   - GET /:id - получение оригинального URL по короткому
+//   - GET /ping - проверка доступности базы данных
+//   - GET /api/user/urls - получение всех URL пользователя
+//   - DELETE /api/user/urls - удаление URL пользователя
 func NewHandler(
 	ginEngine *gin.Engine,
 	service *service.URLShortnerService,
@@ -108,7 +126,35 @@ func (h *Handler) handleGenericErrorText(c *gin.Context, statusCode int, message
 	c.Abort()
 }
 
-// Обработка POST запроса: сокращение URL
+// SendURL обрабатывает POST-запрос для создания короткого URL из текста.
+// Эндпоинт принимает оригинальный URL в теле запроса в формате text/plain
+// и возвращает сокращенный URL в формате text/plain.
+//
+// Метод: POST
+// Путь: /
+// Content-Type: text/plain
+// Требуется аутентификация: да (через cookie)
+//
+// Пример запроса:
+//
+//	POST / HTTP/1.1
+//	Content-Type: text/plain
+//	Cookie: auth_token=...
+//
+//	https://example.com/very-long-url
+//
+// Пример успешного ответа (201 Created):
+//
+//	http://localhost:8080/abc123
+//
+// Пример ответа при конфликте (409 Conflict):
+//
+//	http://localhost:8080/abc123
+//
+// Возможные ошибки:
+//   - 400 Bad Request: неверный Content-Type или ошибка чтения тела запроса
+//   - 409 Conflict: URL уже существует в базе
+//   - 500 Internal Server Error: внутренняя ошибка сервера
 func (h *Handler) SendURL(c *gin.Context) {
 
 	// Проверка Content-Type
@@ -144,7 +190,40 @@ func (h *Handler) SendURL(c *gin.Context) {
 	c.String(http.StatusCreated, h.Configuration.ShortAddress+"/"+shortURL)
 }
 
-// Обработка POST запроса: сокращение URL (JSON)
+// SendJSONURL обрабатывает POST-запрос для создания короткого URL из JSON.
+// Эндпоинт принимает JSON с оригинальным URL и возвращает JSON с сокращенным URL.
+//
+// Метод: POST
+// Путь: /api/shorten
+// Content-Type: application/json
+// Требуется аутентификация: да (через cookie)
+//
+// Пример запроса:
+//
+//	POST /api/shorten HTTP/1.1
+//	Content-Type: application/json
+//	Cookie: auth_token=...
+//
+//	{
+//	  "url": "https://example.com/very-long-url"
+//	}
+//
+// Пример успешного ответа (201 Created):
+//
+//	{
+//	  "result": "http://localhost:8080/abc123"
+//	}
+//
+// Пример ответа при конфликте (409 Conflict):
+//
+//	{
+//	  "result": "http://localhost:8080/abc123"
+//	}
+//
+// Возможные ошибки:
+//   - 400 Bad Request: неверный Content-Type, невалидный JSON или URL
+//   - 409 Conflict: URL уже существует в базе
+//   - 500 Internal Server Error: внутренняя ошибка сервера
 func (h *Handler) SendJSONURL(c *gin.Context) {
 
 	// Проверка Content-Type
@@ -198,7 +277,48 @@ func (h *Handler) SendJSONURL(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-// Обработка POST запроса: пакетное сокращение URL (JSON)
+// SendJSONURLBatch обрабатывает POST-запрос для пакетного создания коротких URL.
+// Эндпоинт принимает массив JSON-объектов с оригинальными URL и correlation_id,
+// и возвращает массив с короткими URL и соответствующими correlation_id.
+//
+// Метод: POST
+// Путь: /api/shorten/batch
+// Content-Type: application/json
+// Требуется аутентификация: да (через cookie)
+//
+// Пример запроса:
+//
+//	POST /api/shorten/batch HTTP/1.1
+//	Content-Type: application/json
+//	Cookie: auth_token=...
+//
+//	[
+//	  {
+//	    "correlation_id": "id1",
+//	    "original_url": "https://example.com/url1"
+//	  },
+//	  {
+//	    "correlation_id": "id2",
+//	    "original_url": "https://example.com/url2"
+//	  }
+//	]
+//
+// Пример успешного ответа (201 Created):
+//
+//	[
+//	  {
+//	    "correlation_id": "id1",
+//	    "short_url": "http://localhost:8080/abc123"
+//	  },
+//	  {
+//	    "correlation_id": "id2",
+//	    "short_url": "http://localhost:8080/def456"
+//	  }
+//	]
+//
+// Возможные ошибки:
+//   - 400 Bad Request: неверный Content-Type, невалидный JSON, пустой массив или невалидные URL
+//   - 500 Internal Server Error: внутренняя ошибка сервера
 func (h *Handler) SendJSONURLBatch(c *gin.Context) {
 
 	// Проверка Content-Type
@@ -265,7 +385,26 @@ func (h *Handler) SendJSONURLBatch(c *gin.Context) {
 	c.JSON(http.StatusCreated, responses)
 }
 
-// Обработка GET запроса: редирект по короткой ссылке
+// GetURL обрабатывает GET-запрос для получения оригинального URL по короткому.
+// Эндпоинт выполняет редирект на оригинальный URL, если короткий URL существует.
+//
+// Метод: GET
+// Путь: /:id
+// Требуется аутентификация: нет
+//
+// Пример запроса:
+//
+//	GET /abc123 HTTP/1.1
+//
+// Пример успешного ответа (307 Temporary Redirect):
+//
+//	HTTP/1.1 307 Temporary Redirect
+//	Location: https://example.com/original-url
+//
+// Возможные ошибки:
+//   - 400 Bad Request: короткий URL не указан
+//   - 404 Not Found: короткий URL не найден
+//   - 410 Gone: URL был удален пользователем
 func (h *Handler) GetURL(c *gin.Context) {
 	// Получаем параметр из URL: /:id
 	shortURL := c.Param("id")
@@ -297,7 +436,25 @@ func (h *Handler) GetURL(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, fullURL)
 }
 
-// Ping PostgreSQL
+// Ping проверяет доступность базы данных PostgreSQL.
+// Эндпоинт используется для healthcheck и мониторинга состояния приложения.
+//
+// Метод: GET
+// Путь: /ping
+// Требуется аутентификация: нет
+//
+// Пример запроса:
+//
+//	GET /ping HTTP/1.1
+//
+// Пример успешного ответа (200 OK):
+//
+//	{
+//	  "status": "OK"
+//	}
+//
+// Возможные ошибки:
+//   - 500 Internal Server Error: база данных недоступна
 func (h *Handler) Ping(c *gin.Context) {
 	if err := h.Service.PingPostgreSQL(); err != nil {
 		h.handleGenericErrorJSON(c, http.StatusInternalServerError, err.Error())
@@ -306,7 +463,35 @@ func (h *Handler) Ping(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "OK"})
 }
 
-// GetUserURLs возвращает все URL пользователя
+// GetUserURLs возвращает все URL, созданные аутентифицированным пользователем.
+// Эндпоинт предоставляет список всех коротких и оригинальных URL пользователя.
+//
+// Метод: GET
+// Путь: /api/user/urls
+// Требуется аутентификация: да (через cookie)
+//
+// Пример запроса:
+//
+//	GET /api/user/urls HTTP/1.1
+//	Cookie: auth_token=...
+//
+// Пример успешного ответа (200 OK):
+//
+//	[
+//	  {
+//	    "short_url": "http://localhost:8080/abc123",
+//	    "original_url": "https://example.com/url1"
+//	  },
+//	  {
+//	    "short_url": "http://localhost:8080/def456",
+//	    "original_url": "https://example.com/url2"
+//	  }
+//	]
+//
+// Возможные ошибки:
+//   - 204 No Content: у пользователя нет созданных URL
+//   - 401 Unauthorized: пользователь не аутентифицирован
+//   - 500 Internal Server Error: внутренняя ошибка сервера
 func (h *Handler) GetUserURLs(c *gin.Context) {
 	// Получаем userID из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
@@ -347,7 +532,33 @@ func (h *Handler) GetUserURLs(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// DeleteUserURLs помечает URL как удаленные для указанного пользователя
+// DeleteUserURLs помечает URL как удаленные для указанного пользователя.
+// Эндпоинт принимает массив коротких URL для удаления (пометки как deleted).
+// Удаление происходит асинхронно в фоновом режиме.
+//
+// Метод: DELETE
+// Путь: /api/user/urls
+// Content-Type: application/json
+// Требуется аутентификация: да (через cookie)
+//
+// Пример запроса:
+//
+//	DELETE /api/user/urls HTTP/1.1
+//	Content-Type: application/json
+//	Cookie: auth_token=...
+//
+//	[
+//	  "abc123",
+//	  "def456"
+//	]
+//
+// Пример успешного ответа (202 Accepted):
+//
+//	HTTP/1.1 202 Accepted
+//
+// Возможные ошибки:
+//   - 400 Bad Request: неверный Content-Type, невалидный JSON или пустой массив
+//   - 401 Unauthorized: пользователь не аутентифицирован
 func (h *Handler) DeleteUserURLs(c *gin.Context) {
 	// Проверка Content-Type
 	contentType := c.GetHeader("Content-Type")

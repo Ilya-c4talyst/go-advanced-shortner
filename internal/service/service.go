@@ -10,13 +10,22 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-// Структура для сервиса сокращения ссылок
+// URLShortnerService предоставляет бизнес-логику для сервиса сокращения URL.
+// Сервис управляет созданием, получением и удалением коротких URL,
+// взаимодействуя с репозиторием для хранения данных.
 type URLShortnerService struct {
 	Repository    repository.URLRepository
 	Configuration *config.ConfigStruct
 }
 
-// Конструктор для сервиса
+// NewURLShortnerService создает новый экземпляр сервиса сокращения URL.
+//
+// Параметры:
+//   - repo: репозиторий для работы с хранилищем URL
+//   - configuration: конфигурация приложения
+//
+// Возвращает:
+//   - *URLShortnerService: инициализированный экземпляр сервиса
 func NewURLShortnerService(repo repository.URLRepository, configuration *config.ConfigStruct) *URLShortnerService {
 	return &URLShortnerService{
 		Repository:    repo,
@@ -24,7 +33,27 @@ func NewURLShortnerService(repo repository.URLRepository, configuration *config.
 	}
 }
 
-// Создание сокращенного URL для пользователя
+// CreateShortURL создает короткий URL для указанного оригинального URL.
+// Метод генерирует уникальный короткий ключ и сохраняет связь с оригинальным URL.
+//
+// Параметры:
+//   - url: оригинальный URL для сокращения
+//   - userID: идентификатор пользователя, создающего URL
+//
+// Возвращает:
+//   - string: сгенерированный короткий URL (без базового адреса)
+//   - error: ошибка при создании URL или repository.ErrRowExists если URL уже существует
+//
+// Пример:
+//
+//	shortURL, err := service.CreateShortURL("https://example.com/long-url", "user123")
+//	if err != nil {
+//	    if errors.Is(err, repository.ErrRowExists) {
+//	        // URL уже существует, shortURL содержит существующий короткий URL
+//	    }
+//	    return err
+//	}
+//	// shortURL содержит новый короткий URL, например "abc123"
 func (u *URLShortnerService) CreateShortURL(url, userID string) (string, error) {
 	// Инициализация результата
 	var shortURL string
@@ -52,7 +81,26 @@ func (u *URLShortnerService) CreateShortURL(url, userID string) (string, error) 
 	return shortURL, nil
 }
 
-// CreateShortURLsBatch создает сокращенные URL для пакета URL для пользователя
+// CreateShortURLsBatch создает короткие URL для пакета оригинальных URL.
+// Метод обрабатывает несколько URL одновременно, что более эффективно для больших объемов данных.
+//
+// Параметры:
+//   - urls: массив оригинальных URL для сокращения
+//   - userID: идентификатор пользователя, создающего URL
+//
+// Возвращает:
+//   - map[string]string: карта соответствия оригинальных URL к коротким URL
+//   - error: ошибка при создании URL
+//
+// Пример:
+//
+//	urls := []string{"https://example.com/url1", "https://example.com/url2"}
+//	result, err := service.CreateShortURLsBatch(urls, "user123")
+//	if err != nil {
+//	    return err
+//	}
+//	// result["https://example.com/url1"] == "abc123"
+//	// result["https://example.com/url2"] == "def456"
 func (u *URLShortnerService) CreateShortURLsBatch(urls []string, userID string) (map[string]string, error) {
 	if len(urls) == 0 {
 		return make(map[string]string), nil
@@ -90,7 +138,24 @@ func (u *URLShortnerService) CreateShortURLsBatch(urls []string, userID string) 
 	return result, nil
 }
 
-// Получение полного URL
+// GetFullURL возвращает оригинальный URL по короткому URL.
+// Метод проверяет, не был ли URL удален, прежде чем вернуть его.
+//
+// Параметры:
+//   - shortURL: короткий URL (без базового адреса)
+//
+// Возвращает:
+//   - string: оригинальный URL
+//   - error: ошибка, если URL не найден или был удален
+//
+// Пример:
+//
+//	fullURL, err := service.GetFullURL("abc123")
+//	if err != nil {
+//	    // URL не найден или удален
+//	    return err
+//	}
+//	// fullURL == "https://example.com/long-url"
 func (u *URLShortnerService) GetFullURL(shortURL string) (string, error) {
 	// Проверяем, не удален ли URL
 	if deleted, err := u.Repository.IsDeleted(shortURL); err == nil && deleted {
@@ -105,12 +170,23 @@ func (u *URLShortnerService) GetFullURL(shortURL string) (string, error) {
 	}
 }
 
-// GetUserURLs получает все URL пользователя
+// GetUserURLs возвращает все URL, созданные указанным пользователем.
+//
+// Параметры:
+//   - userID: идентификатор пользователя
+//
+// Возвращает:
+//   - []map[string]string: массив карт с ключами "short_url" и "original_url"
+//   - error: ошибка при получении URL
 func (u *URLShortnerService) GetUserURLs(userID string) ([]map[string]string, error) {
 	return u.Repository.GetUserURLs(userID)
 }
 
-// Ping DB
+// PingPostgreSQL проверяет доступность базы данных PostgreSQL.
+// Метод используется для healthcheck приложения.
+//
+// Возвращает:
+//   - error: ошибка, если база данных недоступна, или nil если соединение успешно
 func (u *URLShortnerService) PingPostgreSQL() error {
 	db, err := sql.Open("pgx", u.Configuration.AddressDB)
 	if err != nil {
@@ -120,17 +196,35 @@ func (u *URLShortnerService) PingPostgreSQL() error {
 	return db.Ping()
 }
 
-// DeleteURLsBatch помечает URL как удаленные для указанного пользователя
+// DeleteURLsBatch помечает указанные URL как удаленные для пользователя.
+// Удаление происходит мягко (soft delete) - URL помечаются флагом is_deleted.
+//
+// Параметры:
+//   - shortURLs: массив коротких URL для удаления
+//   - userID: идентификатор пользователя, владеющего URL
+//
+// Возвращает:
+//   - error: ошибка при удалении URL
 func (u *URLShortnerService) DeleteURLsBatch(shortURLs []string, userID string) error {
 	return u.Repository.DeleteURLsBatch(shortURLs, userID)
 }
 
-// IsDeleted проверяет, помечен ли URL как удаленный
+// IsDeleted проверяет, помечен ли URL как удаленный.
+//
+// Параметры:
+//   - shortURL: короткий URL для проверки
+//
+// Возвращает:
+//   - bool: true если URL удален, false в противном случае
+//   - error: ошибка при проверке статуса
 func (u *URLShortnerService) IsDeleted(shortURL string) (bool, error) {
 	return u.Repository.IsDeleted(shortURL)
 }
 
-// Close закрывает соединение с репозиторием
+// Close закрывает соединение с репозиторием и освобождает ресурсы.
+//
+// Возвращает:
+//   - error: ошибка при закрытии соединения
 func (u *URLShortnerService) Close() error {
 	return u.Repository.Close()
 }
